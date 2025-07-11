@@ -103,7 +103,69 @@ function MachinesPage() {
         </Modal.Header>
         <Modal.Body>
           <Form>
-            {/* Form fields same as before */}
+            <Form.Group className="mb-3">
+              <Form.Label>Name</Form.Label>
+              <Form.Control
+                type="text"
+                value={newMachine.name}
+                onChange={e => setNewMachine({ ...newMachine, name: e.target.value })}
+                placeholder="Enter machine name"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>MAC Address</Form.Label>
+              <Form.Control
+                type="text"
+                value={newMachine.mac_address}
+                onChange={e => setNewMachine({ ...newMachine, mac_address: e.target.value })}
+                placeholder="Enter MAC address"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>IP Address</Form.Label>
+              <Form.Control
+                type="text"
+                value={newMachine.ip_address}
+                onChange={e => setNewMachine({ ...newMachine, ip_address: e.target.value })}
+                placeholder="Enter IP address"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Subnet Mask</Form.Label>
+              <Form.Control
+                type="text"
+                value={newMachine.subnet_mask}
+                onChange={e => setNewMachine({ ...newMachine, subnet_mask: e.target.value })}
+                placeholder="Enter subnet mask"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Broadcast Address</Form.Label>
+              <Form.Control
+                type="text"
+                value={newMachine.broadcast_address}
+                onChange={e => setNewMachine({ ...newMachine, broadcast_address: e.target.value })}
+                placeholder="Enter broadcast address"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                type="text"
+                value={newMachine.username}
+                onChange={e => setNewMachine({ ...newMachine, username: e.target.value })}
+                placeholder="Enter username"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={newMachine.password}
+                onChange={e => setNewMachine({ ...newMachine, password: e.target.value })}
+                placeholder="Enter password"
+              />
+            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>

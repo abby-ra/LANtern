@@ -1,10 +1,10 @@
+// Removed bcrypt import, no longer needed
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const wol = require('wol');
-const bcrypt = require('bcrypt');
 const { exec } = require('child_process');
 
 const app = express();
@@ -70,16 +70,18 @@ app.get('/api/machines', async (req, res) => {
 app.post('/api/machines', async (req, res) => {
     try {
         const { name, mac_address, ip_address, subnet_mask, broadcast_address, username, password } = req.body;
-        const encrypted_password = await bcrypt.hash(password, 10);
+        
+        console.log('Creating machine with:', { name, mac_address, ip_address, subnet_mask, broadcast_address, username, password: '***' });
         
         const [result] = await db.query(
-            'INSERT INTO machines (name, mac_address, ip_address, subnet_mask, broadcast_address, username, encrypted_password) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, mac_address, ip_address, subnet_mask, broadcast_address, username, encrypted_password]
+            'INSERT INTO machines (name, mac_address, ip_address, subnet_mask, broadcast_address, username, password) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [name, mac_address, ip_address, subnet_mask, broadcast_address, username, password]
         );
         
+        console.log('Machine created with ID:', result.insertId);
         res.status(201).json({ id: result.insertId });
     } catch (err) {
-        console.error(err);
+        console.error('Machine creation error:', err);
         res.status(500).json({ error: 'Failed to add machine' });
     }
 });
@@ -170,7 +172,7 @@ app.post('/api/machines/cluster-action', async (req, res) => {
                     });
                 } else {
                     // Use password from database
-                    const password = machine.password || machine.encrypted_password;
+                    const password = machine.password;
                     await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
                 await db.query(
@@ -230,15 +232,19 @@ app.post('/api/clusters', async (req, res) => {
     try {
         const { name, description, machineIds } = req.body;
         
+        console.log('Creating cluster with:', { name, description, machineIds });
+        
         const [result] = await db.query(
             'INSERT INTO clusters (name, description) VALUES (?, ?)',
             [name, description]
         );
         
         const clusterId = result.insertId;
+        console.log('Cluster created with ID:', clusterId);
         
         if (machineIds && machineIds.length > 0) {
             const values = machineIds.map(machineId => [machineId, clusterId]);
+            console.log('Adding machine associations:', values);
             await db.query(
                 'INSERT INTO machine_cluster (machine_id, cluster_id) VALUES ?',
                 [values]
@@ -247,7 +253,7 @@ app.post('/api/clusters', async (req, res) => {
         
         res.status(201).json({ id: clusterId });
     } catch (err) {
-        console.error(err);
+        console.error('Cluster creation error:', err);
         res.status(500).json({ error: 'Failed to create cluster' });
     }
 });
@@ -318,7 +324,7 @@ app.post('/api/clusters/:id/action', async (req, res) => {
                     });
                 } else {
                     // Use password from database
-                    const password = machine.password || machine.encrypted_password;
+                    const password = machine.password;
                     await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
                 await db.query(
