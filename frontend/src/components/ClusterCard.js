@@ -4,12 +4,11 @@ import { Card, Button, Modal, Form, Alert } from 'react-bootstrap';
 const ClusterCard = ({ cluster, onClusterAction, onDelete }) => {
     const [showActionModal, setShowActionModal] = useState(false);
     const [action, setAction] = useState('');
-    const [password, setPassword] = useState('');
     const [alert, setAlert] = useState({ show: false, message: '', variant: 'success' });
 
     const handleAction = async () => {
         try {
-            await onClusterAction(cluster.id, action, password);
+            await onClusterAction(cluster.id, action);
             setShowActionModal(false);
             setAlert({ show: true, message: `${action} command sent to cluster`, variant: 'success' });
             setTimeout(() => setAlert({ ...alert, show: false }), 3000);
@@ -86,16 +85,6 @@ const ClusterCard = ({ cluster, onClusterAction, onDelete }) => {
                     <Modal.Title>Confirm {action.charAt(0).toUpperCase() + action.slice(1)}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {action !== 'wake' && (
-                        <Form.Group className="mb-3">
-                            <Form.Label>Admin Password</Form.Label>
-                            <Form.Control
-                                type="password"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                            />
-                        </Form.Group>
-                    )}
                     <p>
                         Are you sure you want to {action} the cluster "{cluster.name}"?
                     </p>

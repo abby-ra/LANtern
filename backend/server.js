@@ -169,14 +169,14 @@ app.post('/api/machines/cluster-action', async (req, res) => {
                         });
                     });
                 } else {
-                    await remoteShutdown(machine.ip_address, machine.username, req.body.password, action);
+                    // Use password from database
+                    const password = machine.password || machine.encrypted_password;
+                    await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
-                
                 await db.query(
                     'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                     [machine.id, action, 'success', initiated_by || 'system']
                 );
-                
                 results.push({ machineId: machine.id, status: 'success' });
             } catch (err) {
                 console.error(`Failed to ${action} machine ${machine.id}:`, err);
@@ -187,7 +187,6 @@ app.post('/api/machines/cluster-action', async (req, res) => {
                 results.push({ machineId: machine.id, status: 'failed', error: err.message });
             }
         }
-        
         res.json({ results });
     } catch (err) {
         console.error(err);
@@ -318,14 +317,14 @@ app.post('/api/clusters/:id/action', async (req, res) => {
                         });
                     });
                 } else {
+                    // Use password from database
+                    const password = machine.password || machine.encrypted_password;
                     await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
-                
                 await db.query(
                     'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                     [machine.id, action, 'success', initiated_by || 'system']
                 );
-                
                 results.push({ machineId: machine.id, status: 'success' });
             } catch (err) {
                 console.error(`Failed to ${action} machine ${machine.id}:`, err);
@@ -336,7 +335,6 @@ app.post('/api/clusters/:id/action', async (req, res) => {
                 results.push({ machineId: machine.id, status: 'failed', error: err.message });
             }
         }
-        
         res.json({ results });
     } catch (err) {
         console.error(err);

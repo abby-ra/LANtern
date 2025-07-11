@@ -8,9 +8,7 @@ const API_BASE_URL = 'http://localhost:3001/api';
 function MachinesPage() {
   const [machines, setMachines] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [action, setAction] = useState('');
-  const [password, setPassword] = useState('');
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [newMachine, setNewMachine] = useState({
     name: '',
@@ -59,30 +57,20 @@ function MachinesPage() {
   const handleMachineAction = async (machineIds, actionType) => {
     setSelectedMachines(machineIds);
     setAction(actionType);
-    setShowPasswordModal(true);
+    // Directly confirm action without password modal
+    confirmAction(machineIds, actionType);
   };
 
-  const confirmAction = async () => {
+  const confirmAction = async (machineIds, actionType) => {
     try {
-      if (action === 'wake') {
-        await axios.post(`${API_BASE_URL}/machines/cluster-action`, {
-          machineIds: selectedMachines,
-          action: 'wake',
-          initiated_by: 'admin'
-        });
-      } else {
-        await axios.post(`${API_BASE_URL}/machines/cluster-action`, {
-          machineIds: selectedMachines,
-          action,
-          password,
-          initiated_by: 'admin'
-        });
-      }
-      showAlert(`${action} command sent successfully`, 'success');
-      setShowPasswordModal(false);
-      setPassword('');
+      await axios.post(`${API_BASE_URL}/machines/cluster-action`, {
+        machineIds,
+        action: actionType,
+        initiated_by: 'admin'
+      });
+      showAlert(`${actionType} command sent successfully`, 'success');
     } catch (err) {
-      showAlert(`Failed to perform ${action}`, 'danger');
+      showAlert(`Failed to perform ${actionType}`, 'danger');
     }
   };
 
@@ -128,35 +116,7 @@ function MachinesPage() {
         </Modal.Footer>
       </Modal>
 
-      {/* Password Confirmation Modal */}
-      <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirm {action.charAt(0).toUpperCase() + action.slice(1)}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {action !== 'wake' && (
-            <Form.Group className="mb-3">
-              <Form.Label>Admin Password</Form.Label>
-              <Form.Control
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-            </Form.Group>
-          )}
-          <p>
-            Are you sure you want to {action} {selectedMachines.length} selected machines?
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPasswordModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={confirmAction}>
-            Confirm
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Password Confirmation Modal removed. Actions are now direct. */}
     </>
   );
 }
