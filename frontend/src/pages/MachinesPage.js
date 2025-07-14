@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Modal, Form, Alert, Spinner, Container } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import MachineTable from '../components/MachineTable';
+import ClusterManager from '../components/ClusterManager';
 import '../components/animations.css';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -10,6 +12,7 @@ function MachinesPage() {
   const [machines, setMachines] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showClusterModal, setShowClusterModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
   const [action, setAction] = useState('');
   const [selectedMachines, setSelectedMachines] = useState([]);
@@ -173,56 +176,80 @@ function MachinesPage() {
   };
 
   return (
-    <Container fluid className="page-container">
-      <div className="d-flex justify-content-between align-items-center mb-4 page-header">
-        <h2 className="gradient-bg p-3 rounded-3 shadow-sm" style={{ color: 'black' }}>
-          <i className="fas fa-server me-2"></i>
-          Machines Management
-        </h2>
-        <div>
-          <Button 
-            variant="primary" 
-            className="btn-animated"
-            onClick={() => setShowAddModal(true)}
-          >
-            <i className="fas fa-plus me-2"></i> Add Machine
-          </Button>
-        </div>
+    <div className="page-container">
+      {/* Unified Navigation and Action Bar */}
+      <div className="unified-nav-bar">
+        <Container fluid>
+          <div className="nav-content">
+            <div className="brand-section">
+              <Link to="/" className="brand-logo">
+                <i className="fas fa-network-wired me-2"></i>
+                LANtern
+              </Link>
+            </div>
+            <div className="nav-actions">
+              <Link to="/machines" className="action-btn">
+                <i className="fas fa-server"></i>
+                Machines
+              </Link>
+              <Link to="/clusters" className="action-btn secondary">
+                <i className="fas fa-layer-group"></i>
+                Clusters
+              </Link>
+              <Button 
+                onClick={() => setShowAddModal(true)} 
+                className="action-btn"
+              >
+                <i className="fas fa-plus"></i>
+                Add Machine
+              </Button>
+              <Button 
+                onClick={() => setShowClusterModal(true)} 
+                className="action-btn secondary"
+              >
+                <i className="fas fa-plus-circle"></i>
+                Add Cluster
+              </Button>
+            </div>
+          </div>
+        </Container>
       </div>
 
-      {alert.show && (
-        <Alert 
-          variant={alert.variant} 
-          onClose={() => setAlert({ ...alert, show: false })} 
-          dismissible
-          className="shadow-sm"
-        >
-          {alert.message}
-        </Alert>
-      )}
+      <Container fluid>
+        {alert.show && (
+          <Alert 
+            variant={alert.variant} 
+            onClose={() => setAlert({ ...alert, show: false })} 
+            dismissible
+            className="shadow-sm"
+          >
+            {alert.message}
+          </Alert>
+        )}
 
-      <div className="table-container">
-        {loading ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary loading-spinner" role="status">
-              <span className="visually-hidden">Loading...</span>
+        <div className="table-container">
+          {loading ? (
+            <div className="text-center py-5">
+              <Spinner animation="border" role="status" className="me-2">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+              <span>Loading machines...</span>
             </div>
-            <p className="mt-3 text-muted">Loading machines...</p>
-          </div>
-        ) : (
-          <div className="slide-in-left">
+          ) : (
             <MachineTable 
               machines={machines} 
-              onAction={handleMachineAction}
-              onEdit={handleEditMachine}
+              onEdit={(machine) => {
+                setEditingMachine(machine);
+                setNewMachine(machine);
+                setShowEditModal(true);
+              }}
               onDelete={handleDeleteMachine}
             />
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Add Machine Modal */}
-      <Modal show={showAddModal} onHide={() => setShowAddModal(false)} size="lg" className="fade">
+        {/* Add Machine Modal */}
+        <Modal show={showAddModal} onHide={() => setShowAddModal(false)} size="lg" className="fade">
         <Modal.Header closeButton className="gradient-bg">
           <Modal.Title>
             <i className="fas fa-plus-circle me-2"></i>
@@ -443,8 +470,19 @@ function MachinesPage() {
         </Modal.Footer>
       </Modal>
 
+      <ClusterManager
+        show={showClusterModal}
+        onHide={() => setShowClusterModal(false)}
+        machines={machines}
+        onClusterCreated={() => {
+          setShowClusterModal(false);
+          showAlert('Cluster created successfully! 🎉', 'success');
+        }}
+      />
+
       {/* Password Confirmation Modal removed. Actions are now direct. */}
-    </Container>
+      </Container>
+    </div>
   );
 }
 

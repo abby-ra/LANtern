@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Alert, Card, Container } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import ClusterManager from '../components/ClusterManager';
 import ClusterCard from '../components/ClusterCard';
@@ -91,22 +92,46 @@ function ClustersPage() {
   };
 
   return (
-    <Container fluid className="page-container">
-      <div className="d-flex justify-content-between align-items-center mb-4 page-header">
-        <h2 className="gradient-bg p-3 rounded-3 shadow-sm" style={{ color: 'black' }}>
-          <i className="fas fa-layer-group me-2"></i>
-          Cluster Management
-        </h2>
-        <div>
-          <Button 
-            variant="primary" 
-            className="btn-animated"
-            onClick={() => setShowClusterManager(true)}
-          >
-            <i className="fas fa-plus me-2"></i> Create Cluster
-          </Button>
-        </div>
+    <div className="page-container">
+      {/* Unified Navigation and Action Bar */}
+      <div className="unified-nav-bar">
+        <Container fluid>
+          <div className="nav-content">
+            <div className="brand-section">
+              <Link to="/" className="brand-logo">
+                <i className="fas fa-network-wired me-2"></i>
+                LANtern
+              </Link>
+            </div>
+            <div className="nav-actions">
+              <Link to="/machines" className="action-btn secondary">
+                <i className="fas fa-server"></i>
+                Machines
+              </Link>
+              <Link to="/clusters" className="action-btn">
+                <i className="fas fa-layer-group"></i>
+                Clusters
+              </Link>
+              <Button 
+                onClick={() => window.location.href = '/machines'} 
+                className="action-btn secondary"
+              >
+                <i className="fas fa-plus"></i>
+                Add Machine
+              </Button>
+              <Button 
+                onClick={() => setShowClusterManager(true)} 
+                className="action-btn"
+              >
+                <i className="fas fa-plus-circle"></i>
+                Add Cluster
+              </Button>
+            </div>
+          </div>
+        </Container>
       </div>
+
+      <Container fluid>
 
       {alert.show && (
         <Alert 
@@ -170,7 +195,8 @@ function ClustersPage() {
         machines={machines}
         onClusterCreated={fetchClusters}
       />
-    </Container>
+      </Container>
+    </div>
   );
 }
 
