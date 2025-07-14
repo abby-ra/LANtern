@@ -6,8 +6,8 @@ import ClustersPage from './pages/ClustersPage';
 
 function App() {
   return (
-    <div className="d-flex flex-column min-vh-100">
-      <div className="flex-grow-1">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex-grow">
         <Routes>
           <Route path="/" element={<MachinesPage />} />
           <Route path="/machines" element={<MachinesPage />} />

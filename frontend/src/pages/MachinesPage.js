@@ -176,64 +176,73 @@ function MachinesPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="min-h-screen bg-gray-50 animate-fade-in">
       {/* Unified Navigation and Action Bar */}
-      <div className="unified-nav-bar">
-        <Container fluid>
-          <div className="nav-content">
-            <div className="brand-section">
-              <Link to="/" className="brand-logo">
-                <i className="fas fa-network-wired me-2"></i>
+      <div className="bg-white border-b-2 border-gray-200 py-4 mb-8 shadow-light">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-8">
+              <Link 
+                to="/" 
+                className="text-accent-800 text-3xl font-bold no-underline hover:text-primary-500 transition-colors duration-200"
+              >
+                <i className="fas fa-network-wired mr-2"></i>
                 LANtern
               </Link>
             </div>
-            <div className="nav-actions">
-              <Link to="/machines" className="action-btn">
-                <i className="fas fa-server"></i>
+            <div className="flex items-center gap-4 flex-wrap">
+              <Link 
+                to="/machines" 
+                className="bg-primary-500 text-white px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 no-underline inline-flex items-center gap-2 hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <i className="fas fa-desktop"></i>
                 Machines
               </Link>
-              <Link to="/clusters" className="action-btn secondary">
+              <Link 
+                to="/clusters" 
+                className="bg-gray-100 text-accent-800 border border-gray-200 px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 no-underline inline-flex items-center gap-2 hover:bg-blue-50 hover:border-primary-500"
+              >
                 <i className="fas fa-layer-group"></i>
                 Clusters
               </Link>
               <Button 
                 onClick={() => setShowAddModal(true)} 
-                className="action-btn"
+                className="bg-primary-500 text-white px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 border-none inline-flex items-center gap-2 hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
+                style={{ background: '#3498DB', border: 'none' }}
               >
                 <i className="fas fa-plus"></i>
                 Add Machine
               </Button>
               <Button 
                 onClick={() => setShowClusterModal(true)} 
-                className="action-btn secondary"
+                className="bg-gray-100 text-accent-800 border border-gray-200 px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 inline-flex items-center gap-2 hover:bg-blue-50 hover:border-primary-500"
+                variant="outline-primary"
               >
                 <i className="fas fa-plus-circle"></i>
                 Add Cluster
               </Button>
             </div>
           </div>
-        </Container>
+        </div>
       </div>
 
-      <Container fluid>
+      <div className="max-w-7xl mx-auto px-4">
         {alert.show && (
           <Alert 
             variant={alert.variant} 
             onClose={() => setAlert({ ...alert, show: false })} 
             dismissible
-            className="shadow-sm"
+            className="rounded-lg border-none px-5 py-4 mb-4"
           >
             {alert.message}
           </Alert>
         )}
 
-        <div className="table-container">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-light overflow-hidden animate-fade-in">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" role="status" className="me-2">
-                <span className="visually-hidden">Loading...</span>
-              </Spinner>
-              <span>Loading machines...</span>
+            <div className="text-center py-12">
+              <div className="inline-block w-8 h-8 border-4 border-gray-300 border-t-primary-500 rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-600">Loading machines...</p>
             </div>
           ) : (
             <MachineTable 
@@ -244,6 +253,7 @@ function MachinesPage() {
                 setShowEditModal(true);
               }}
               onDelete={handleDeleteMachine}
+              onAction={handleMachineAction}
             />
           )}
         </div>
@@ -481,7 +491,7 @@ function MachinesPage() {
       />
 
       {/* Password Confirmation Modal removed. Actions are now direct. */}
-      </Container>
+      </div>
     </div>
   );
 }

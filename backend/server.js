@@ -41,8 +41,19 @@ async function remoteShutdown(ip, username, password, action = 'shutdown') {
     // Create a temporary batch file with credentials
     const cmd = `net use \\\\${ip} /user:${username} ${password} && ${commands[action]}`;
     
+    console.log(`\n=== REMOTE ${action.toUpperCase()} DEBUG ===`);
+    console.log(`Target IP: ${ip}`);
+    console.log(`Username: ${username}`);
+    console.log(`Command: ${commands[action]}`);
+    
     return new Promise((resolve, reject) => {
         exec(cmd, (error, stdout, stderr) => {
+            console.log(`Command execution completed for ${ip}`);
+            console.log(`Error:`, error ? error.message : 'None');
+            console.log(`STDOUT:`, stdout || 'Empty');
+            console.log(`STDERR:`, stderr || 'Empty');
+            console.log(`=== END REMOTE ${action.toUpperCase()} DEBUG ===\n`);
+            
             if (error) {
                 console.error(`Error executing command: ${error.message}`);
                 return reject(error);
@@ -59,7 +70,7 @@ async function remoteShutdown(ip, username, password, action = 'shutdown') {
 // API Routes
 app.get('/api/machines', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM machines WHERE is_active = TRUE');
+        const [rows] = await db.query('SELECT * FROM machines');
         res.json(rows);
     } catch (err) {
         console.error(err);
@@ -154,16 +165,24 @@ app.post('/api/machines/cluster-action', async (req, res) => {
     try {
         const { machineIds, action, initiated_by } = req.body;
         
+        console.log(`\n=== CLUSTER ACTION DEBUG ===`);
+        console.log(`Action: ${action}`);
+        console.log(`Machine IDs: ${JSON.stringify(machineIds)}`);
+        console.log(`Initiated by: ${initiated_by}`);
+        
         if (!machineIds || !Array.isArray(machineIds) ){
             return res.status(400).json({ error: 'Invalid machine IDs' });
         }
         
         const [machines] = await db.query('SELECT * FROM machines WHERE id IN (?)', [machineIds]);
+        console.log(`Found ${machines.length} machines in database`);
         
         const results = [];
         for (const machine of machines) {
+            console.log(`\nProcessing machine: ${machine.name} (${machine.ip_address})`);
             try {
                 if (action === 'wake') {
+                    console.log(`Sending Wake-on-LAN to ${machine.mac_address}`);
                     await new Promise((resolve, reject) => {
                         wol.wake(machine.mac_address, { address: machine.broadcast_address }, (err) => {
                             if (err) return reject(err);
@@ -173,6 +192,7 @@ app.post('/api/machines/cluster-action', async (req, res) => {
                 } else {
                     // Use password from database
                     const password = machine.encrypted_password;
+                    console.log(`Executing ${action} command for ${machine.ip_address} with user ${machine.username}`);
                     await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
                 await db.query(
@@ -193,6 +213,98 @@ app.post('/api/machines/cluster-action', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to perform cluster action' });
+    }
+});
+
+// Ping machine to check status
+app.post('/api/machines/:id/ping', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        const startTime = Date.now();
+        
+        // Use ping command based on OS
+        const isWindows = process.platform === 'win32';
+        const pingCommand = isWindows 
+            ? `ping -n 1 -w 3000 ${machine.ip_address}`
+            : `ping -c 1 -W 3 ${machine.ip_address}`;
+        
+        exec(pingCommand, async (error, stdout, stderr) => {
+            const responseTime = Date.now() - startTime;
+            let isOnline = false;
+            let parsedResponseTime = null;
+            
+            // Log ping command and results for debugging
+            console.log(`\n=== PING DEBUG for ${machine.name} (${machine.ip_address}) ===`);
+            console.log(`Command: ${pingCommand}`);
+            console.log(`Error:`, error ? error.message : 'None');
+            console.log(`STDOUT:`, stdout || 'Empty');
+            console.log(`STDERR:`, stderr || 'Empty');
+            console.log(`Total execution time: ${responseTime}ms`);
+            
+            if (!error && stdout) {
+                // Check if ping was successful
+                if (isWindows) {
+                    isOnline = stdout.includes('Reply from') && !stdout.includes('Request timed out');
+                    console.log(`Windows ping check - Reply from: ${stdout.includes('Reply from')}, Timeout: ${stdout.includes('Request timed out')}`);
+                    // Extract response time from Windows ping
+                    const timeMatch = stdout.match(/time[<=](\d+)ms/);
+                    if (timeMatch) {
+                        parsedResponseTime = parseInt(timeMatch[1]);
+                        console.log(`Extracted response time: ${parsedResponseTime}ms`);
+                    }
+                } else {
+                    isOnline = stdout.includes('1 received') || stdout.includes('1 packets received');
+                    console.log(`Unix ping check - 1 received: ${stdout.includes('1 received')}, packets received: ${stdout.includes('1 packets received')}`);
+                    // Extract response time from Unix ping
+                    const timeMatch = stdout.match(/time=(\d+\.?\d*) ms/);
+                    if (timeMatch) {
+                        parsedResponseTime = Math.round(parseFloat(timeMatch[1]));
+                        console.log(`Extracted response time: ${parsedResponseTime}ms`);
+                    }
+                }
+            } else {
+                // If there's an error or no stdout, machine is considered offline/idle
+                isOnline = false;
+                console.log(`Ping failed - machine considered offline/idle`);
+            }
+            
+            console.log(`Final result - isOnline: ${isOnline}, parsedResponseTime: ${parsedResponseTime}`);
+            console.log(`=== END PING DEBUG ===\n`);
+            
+            // Log ping result
+            try {
+                await db.query(
+                    'INSERT INTO power_events (machine_id, action, status, initiated_by, response_time) VALUES (?, ?, ?, ?, ?)',
+                    [machineId, 'ping', isOnline ? 'success' : 'failed', 'system', parsedResponseTime]
+                );
+                
+                // Update machine active status
+                await db.query(
+                    'UPDATE machines SET is_active = ?, last_ping = NOW() WHERE id = ?',
+                    [isOnline ? 1 : 0, machineId]
+                );
+            } catch (dbError) {
+                console.error('Database error during ping logging:', dbError);
+            }
+            
+            res.json({
+                isOnline,
+                responseTime: parsedResponseTime,
+                totalTime: responseTime,
+                machine: machine.name,
+                ip: machine.ip_address
+            });
+        });
+    } catch (err) {
+        console.error('Ping error:', err);
+        res.status(500).json({ error: 'Failed to ping machine' });
     }
 });
 

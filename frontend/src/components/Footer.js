@@ -1,30 +1,22 @@
 import React from 'react';
-import { Container } from 'react-bootstrap';
 
 function Footer() {
   return (
-    <footer 
-      className="mt-5 py-4" 
-      style={{ 
-        backgroundColor: 'var(--secondary-bg)', 
-        borderTop: '1px solid var(--border-color)',
-        marginTop: 'auto'
-      }}
-    >
-      <Container>
+    <footer className="mt-12 py-6 bg-gray-300 border-t border-gray-200">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="text-center">
-          <div className="mb-2" style={{ color: 'var(--text-primary)' }}>
-            <i className="fas fa-network-wired me-2"></i>
+          <div className="mb-2 text-accent-800">
+            <i className="fas fa-network-wired mr-2"></i>
             <strong>LANtern</strong> - Network Management System
           </div>
-          <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <div className="text-sm text-gray-600">
             © 2025 LANtern Project. All rights reserved.
           </div>
-          <div style={{ fontSize: '0.8rem', marginTop: '8px', color: 'var(--text-secondary)' }}>
+          {/* <div className="text-xs mt-2 text-gray-600">
             Developed by <strong>Abby Ra</strong> & <strong>Assistant AI</strong>
-          </div>
+          </div> */}
         </div>
-      </Container>
+      </div>
     </footer>
   );
 }

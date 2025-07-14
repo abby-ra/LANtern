@@ -92,102 +92,106 @@ function ClustersPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="min-h-screen bg-gray-50 animate-fade-in">
       {/* Unified Navigation and Action Bar */}
-      <div className="unified-nav-bar">
-        <Container fluid>
-          <div className="nav-content">
-            <div className="brand-section">
-              <Link to="/" className="brand-logo">
-                <i className="fas fa-network-wired me-2"></i>
+      <div className="bg-white border-b-2 border-gray-200 py-4 mb-8 shadow-light">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-8">
+              <Link 
+                to="/" 
+                className="text-accent-800 text-3xl font-bold no-underline hover:text-primary-500 transition-colors duration-200"
+              >
+                <i className="fas fa-network-wired mr-2"></i>
                 LANtern
               </Link>
             </div>
-            <div className="nav-actions">
-              <Link to="/machines" className="action-btn secondary">
-                <i className="fas fa-server"></i>
+            <div className="flex items-center gap-4 flex-wrap">
+              <Link 
+                to="/machines" 
+                className="bg-gray-100 text-accent-800 border border-gray-200 px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 no-underline inline-flex items-center gap-2 hover:bg-blue-50 hover:border-primary-500"
+              >
+                <i className="fas fa-desktop"></i>
                 Machines
               </Link>
-              <Link to="/clusters" className="action-btn">
+              <Link 
+                to="/clusters" 
+                className="bg-primary-500 text-white px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 no-underline inline-flex items-center gap-2 hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
+              >
                 <i className="fas fa-layer-group"></i>
                 Clusters
               </Link>
               <Button 
                 onClick={() => window.location.href = '/machines'} 
-                className="action-btn secondary"
+                className="bg-gray-100 text-accent-800 border border-gray-200 px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 inline-flex items-center gap-2 hover:bg-blue-50 hover:border-primary-500"
+                variant="outline-primary"
               >
                 <i className="fas fa-plus"></i>
                 Add Machine
               </Button>
               <Button 
                 onClick={() => setShowClusterManager(true)} 
-                className="action-btn"
+                className="bg-primary-500 text-white px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 border-none inline-flex items-center gap-2 hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
+                style={{ background: '#3498DB', border: 'none' }}
               >
                 <i className="fas fa-plus-circle"></i>
                 Add Cluster
               </Button>
             </div>
           </div>
-        </Container>
+        </div>
       </div>
 
-      <Container fluid>
+      <div className="max-w-7xl mx-auto px-4">
 
-      {alert.show && (
-        <Alert 
-          variant={alert.variant} 
-          onClose={() => setAlert({ ...alert, show: false })} 
-          dismissible
-          className="shadow-sm"
-        >
-          {alert.message}
-        </Alert>
-      )}
-
-      <div className="clusters-container">
-        {loading ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary loading-spinner" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p className="mt-3 text-muted">Loading clusters...</p>
-          </div>
-        ) : (
-          <div className="slide-in-left">
-            {clusters.length === 0 ? (
-              <Card className="shadow-sm border-0">
-                <Card.Body className="text-center py-5">
-                  <div className="mb-3">
-                    <i className="fas fa-layer-group fa-3x text-muted"></i>
-                  </div>
-                  <h5 className="text-muted mb-2">No clusters defined yet</h5>
-                  <p className="text-muted">Create your first cluster to manage groups of machines efficiently.</p>
-                  <Button 
-                    variant="primary" 
-                    className="btn-animated mt-3"
-                    onClick={() => setShowClusterManager(true)}
-                  >
-                    <i className="fas fa-plus me-2"></i>Create Your First Cluster
-                  </Button>
-                </Card.Body>
-              </Card>
-            ) : (
-              <div className="row g-4">
-                {clusters.map(cluster => (
-                  <div key={cluster.id} className="col-lg-6 col-xl-4">
-                    <ClusterCard
-                      cluster={cluster}
-                      onClusterAction={handleClusterPowerAction}
-                      onEdit={handleEditCluster}
-                      onDelete={handleDeleteCluster}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {alert.show && (
+          <Alert 
+            variant={alert.variant} 
+            onClose={() => setAlert({ ...alert, show: false })} 
+            dismissible
+            className="rounded-lg border-none px-5 py-4 mb-4"
+          >
+            {alert.message}
+          </Alert>
         )}
-      </div>
+
+        <div className="min-h-64">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block w-8 h-8 border-4 border-gray-300 border-t-primary-500 rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-600">Loading clusters...</p>
+            </div>
+          ) : clusters.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="bg-white border border-gray-200 rounded-xl shadow-light p-8">
+                <i className="fas fa-layer-group text-4xl text-gray-400 mb-4"></i>
+                <h3 className="text-xl font-semibold text-accent-800 mb-2">No Clusters Found</h3>
+                <p className="text-gray-600 mb-6">Get started by creating your first cluster</p>
+                <Button 
+                  onClick={() => setShowClusterManager(true)}
+                  className="bg-primary-500 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 border-none hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
+                  style={{ background: '#3498DB', border: 'none' }}
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  Create Your First Cluster
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+              {clusters.map((cluster) => (
+                <div key={cluster.id} className="bg-white border border-gray-200 rounded-xl shadow-light transition-all duration-200 hover:shadow-medium hover:-translate-y-1">
+                  <ClusterCard
+                    cluster={cluster}
+                    onClusterAction={handleClusterPowerAction}
+                    onEdit={handleEditCluster}
+                    onDelete={handleDeleteCluster}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
       <ClusterManager
         show={showClusterManager}
@@ -195,7 +199,7 @@ function ClustersPage() {
         machines={machines}
         onClusterCreated={fetchClusters}
       />
-      </Container>
+      </div>
     </div>
   );
 }

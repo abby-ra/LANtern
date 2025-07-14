@@ -1,15 +1,125 @@
-import React, { useState } from 'react';
-import { Table, Button, Alert, Badge, Dropdown, DropdownButton } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Alert, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
+import axios from 'axios';
 import './animations.css';
+
+const API_BASE_URL = 'http://localhost:3001/api';
 
 function MachineTable({ machines, onAction, onEdit, onDelete }) {
   const [selectedMachines, setSelectedMachines] = useState([]);
+  const [machineStatuses, setMachineStatuses] = useState({});
+  const [pingInProgress, setPingInProgress] = useState({});
+
+  // Ping verification function
+  const verifyMachineStatus = async (machine) => {
+    setPingInProgress(prev => ({ ...prev, [machine.id]: true }));
+    try {
+      const response = await axios.post(`${API_BASE_URL}/machines/${machine.id}/ping`);
+      const isOnline = response.data.isOnline;
+      
+      setMachineStatuses(prev => ({
+        ...prev,
+        [machine.id]: {
+          isOnline,
+          lastPing: new Date(),
+          responseTime: response.data.responseTime || null
+        }
+      }));
+
+      // Update machine status in database if different
+      if ((isOnline && machine.is_active !== 1) || (!isOnline && machine.is_active !== 0)) {
+        await axios.put(`${API_BASE_URL}/machines/${machine.id}`, {
+          ...machine,
+          is_active: isOnline ? 1 : 0
+        });
+      }
+    } catch (error) {
+      console.error('Ping failed:', error);
+      setMachineStatuses(prev => ({
+        ...prev,
+        [machine.id]: {
+          isOnline: false,
+          lastPing: new Date(),
+          responseTime: null,
+          error: true
+        }
+      }));
+    } finally {
+      setPingInProgress(prev => ({ ...prev, [machine.id]: false }));
+    }
+  };
+
+  // Auto-ping every 30 seconds for visible machines
+  useEffect(() => {
+    // Initial ping for all machines
+    machines.forEach(machine => {
+      verifyMachineStatus(machine);
+    });
+
+    // Set up interval for continuous monitoring
+    const interval = setInterval(() => {
+      machines.forEach(machine => {
+        if (!pingInProgress[machine.id]) {
+          verifyMachineStatus(machine);
+        }
+      });
+    }, 30000); // Ping every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [machines]);
 
   const handleMachineSelect = (machineId, isSelected) => {
     setSelectedMachines(prev =>
       isSelected
         ? [...prev, machineId]
         : prev.filter(id => id !== machineId)
+    );
+  };
+
+  const getMachineStatus = (machine) => {
+    const pingStatus = machineStatuses[machine.id];
+    if (pingStatus) {
+      return pingStatus.isOnline;
+    }
+    return machine.is_active === 1;
+  };
+
+  const getStatusBadge = (machine) => {
+    const isOnline = getMachineStatus(machine);
+    const pingStatus = machineStatuses[machine.id];
+    const isPinging = pingInProgress[machine.id];
+
+    if (isPinging) {
+      return (
+        <Badge bg="warning" className="d-flex align-items-center gap-1">
+          <div className="ping-spinner"></div>
+          Checking...
+        </Badge>
+      );
+    }
+
+    if (pingStatus?.error) {
+      return (
+        <Badge bg="danger" className="status-indicator idle" title="Machine is offline or unreachable">
+          <i className="fas fa-circle me-1"></i>
+          Idle
+        </Badge>
+      );
+    }
+
+    return isOnline ? (
+      <Badge bg="success" className="status-indicator active" title={pingStatus?.responseTime ? `Response time: ${pingStatus.responseTime}ms` : 'Machine is online'}>
+        <i className="fas fa-circle me-1"></i>
+        Active
+        {pingStatus?.responseTime && (
+          <small className="ms-1">({pingStatus.responseTime}ms)</small>
+        )}
+      </Badge>
+    ) : (
+      <Badge bg="danger" className="status-indicator idle" title="Machine is offline or unreachable">
+        <i className="fas fa-circle me-1"></i>
+        Idle
+      </Badge>
     );
   };
 
@@ -53,7 +163,7 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
           <div className="mt-2">
             <small className="text-muted">
               <i className="fas fa-info-circle me-1"></i>
-              {selectedMachines.length} machine(s) selected
+              {selectedMachines.length} PC(s) selected for bulk action
             </small>
           </div>
         )}
@@ -63,17 +173,22 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
         <thead className="table-dark">
           <tr>
             <th width="50">
-              <input
-                type="checkbox"
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedMachines(machines.map(m => m.id));
-                  } else {
-                    setSelectedMachines([]);
-                  }
-                }}
-                checked={selectedMachines.length === machines.length && machines.length > 0}
-              />
+              <div className="custom-checkbox">
+                <input
+                  type="checkbox"
+                  id="select-all-machines"
+                  className="curved-checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedMachines(machines.map(m => m.id));
+                    } else {
+                      setSelectedMachines([]);
+                    }
+                  }}
+                  checked={selectedMachines.length === machines.length && machines.length > 0}
+                />
+                <label htmlFor="select-all-machines" className="checkbox-label"></label>
+              </div>
             </th>
             <th><i className="fas fa-tag me-2"></i>Name</th>
             <th><i className="fas fa-globe me-2"></i>IP Address</th>
@@ -86,15 +201,20 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
           {machines.map((machine, index) => (
             <tr key={machine.id} className="table-row" style={{animationDelay: `${index * 0.1}s`}}>
               <td>
-                <input
-                  type="checkbox"
-                  onChange={e => handleMachineSelect(machine.id, e.target.checked)}
-                  checked={selectedMachines.includes(machine.id)}
-                />
+                <div className="custom-checkbox">
+                  <input
+                    type="checkbox"
+                    id={`machine-${machine.id}`}
+                    className="curved-checkbox"
+                    onChange={e => handleMachineSelect(machine.id, e.target.checked)}
+                    checked={selectedMachines.includes(machine.id)}
+                  />
+                  <label htmlFor={`machine-${machine.id}`} className="checkbox-label"></label>
+                </div>
               </td>
               <td>
                 <strong className="text-primary">
-                  <i className="fas fa-server me-2"></i>
+                  <i className="fas fa-desktop me-2"></i>
                   {machine.name}
                 </strong>
               </td>
@@ -105,17 +225,7 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
                 <code className="bg-light p-1 rounded">{machine.mac_address}</code>
               </td>
               <td>
-                {machine.is_active === 1 ? (
-                  <Badge bg="success" className="status-indicator active">
-                    <i className="fas fa-circle me-1"></i>
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge bg="danger" className="status-indicator idle">
-                    <i className="fas fa-circle me-1"></i>
-                    Idle
-                  </Badge>
-                )}
+                {getStatusBadge(machine)}
               </td>
               <td>
                 <DropdownButton
