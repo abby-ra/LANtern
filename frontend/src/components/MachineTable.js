@@ -1,8 +1,72 @@
-import React, { useState } from 'react';
-import { Table, Button, Alert } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Alert, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
+import axios from 'axios';
+import './animations.css';
 
-function MachineTable({ machines, onAction }) {
+const API_BASE_URL = 'http://localhost:3001/api';
+
+function MachineTable({ machines, onAction, onEdit, onDelete }) {
   const [selectedMachines, setSelectedMachines] = useState([]);
+  const [machineStatuses, setMachineStatuses] = useState({});
+  const [pingInProgress, setPingInProgress] = useState({});
+
+  // Ping verification function
+  const verifyMachineStatus = async (machine) => {
+    setPingInProgress(prev => ({ ...prev, [machine.id]: true }));
+    try {
+      const response = await axios.post(`${API_BASE_URL}/machines/${machine.id}/ping`);
+      const isOnline = response.data.isOnline;
+      
+      setMachineStatuses(prev => ({
+        ...prev,
+        [machine.id]: {
+          isOnline,
+          lastPing: new Date(),
+          responseTime: response.data.responseTime || null
+        }
+      }));
+
+      // Update machine status in database if different
+      if ((isOnline && machine.is_active !== 1) || (!isOnline && machine.is_active !== 0)) {
+        await axios.put(`${API_BASE_URL}/machines/${machine.id}`, {
+          ...machine,
+          is_active: isOnline ? 1 : 0
+        });
+      }
+    } catch (error) {
+      console.error('Ping failed:', error);
+      setMachineStatuses(prev => ({
+        ...prev,
+        [machine.id]: {
+          isOnline: false,
+          lastPing: new Date(),
+          responseTime: null,
+          error: true
+        }
+      }));
+    } finally {
+      setPingInProgress(prev => ({ ...prev, [machine.id]: false }));
+    }
+  };
+
+  // Auto-ping every 30 seconds for visible machines
+  useEffect(() => {
+    // Initial ping for all machines
+    machines.forEach(machine => {
+      verifyMachineStatus(machine);
+    });
+
+    // Set up interval for continuous monitoring
+    const interval = setInterval(() => {
+      machines.forEach(machine => {
+        if (!pingInProgress[machine.id]) {
+          verifyMachineStatus(machine);
+        }
+      });
+    }, 30000); // Ping every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [machines]);
 
   const handleMachineSelect = (machineId, isSelected) => {
     setSelectedMachines(prev =>
@@ -12,90 +76,216 @@ function MachineTable({ machines, onAction }) {
     );
   };
 
+  const getMachineStatus = (machine) => {
+    const pingStatus = machineStatuses[machine.id];
+    if (pingStatus) {
+      return pingStatus.isOnline;
+    }
+    return machine.is_active === 1;
+  };
+
+  const getStatusBadge = (machine) => {
+    const isOnline = getMachineStatus(machine);
+    const pingStatus = machineStatuses[machine.id];
+    const isPinging = pingInProgress[machine.id];
+
+    if (isPinging) {
+      return (
+        <Badge bg="warning" className="d-flex align-items-center gap-1">
+          <div className="ping-spinner"></div>
+          Checking...
+        </Badge>
+      );
+    }
+
+    if (pingStatus?.error) {
+      return (
+        <Badge bg="danger" className="status-indicator idle" title="Machine is offline or unreachable">
+          <i className="fas fa-circle me-1"></i>
+          Idle
+        </Badge>
+      );
+    }
+
+    return isOnline ? (
+      <Badge bg="success" className="status-indicator active" title={pingStatus?.responseTime ? `Response time: ${pingStatus.responseTime}ms` : 'Machine is online'}>
+        <i className="fas fa-circle me-1"></i>
+        Active
+        {pingStatus?.responseTime && (
+          <small className="ms-1">({pingStatus.responseTime}ms)</small>
+        )}
+      </Badge>
+    ) : (
+      <Badge bg="danger" className="status-indicator idle" title="Machine is offline or unreachable">
+        <i className="fas fa-circle me-1"></i>
+        Idle
+      </Badge>
+    );
+  };
+
   return (
-    <>
-      <div className="mb-3">
-        <Button
-          variant="success"
-          className="me-2"
-          disabled={selectedMachines.length === 0}
-          onClick={() => onAction(selectedMachines, 'wake')}
-        >
-          <i className="fas fa-power-off"></i> Start Selected
-        </Button>
-        <Button
-          variant="warning"
-          className="me-2"
-          disabled={selectedMachines.length === 0}
-          onClick={() => onAction(selectedMachines, 'restart')}
-        >
-          <i className="fas fa-redo"></i> Restart Selected
-        </Button>
-        <Button
-          variant="danger"
-          disabled={selectedMachines.length === 0}
-          onClick={() => onAction(selectedMachines, 'shutdown')}
-        >
-          <i className="fas fa-power-off"></i> Shutdown Selected
-        </Button>
+    <div className="machine-table-container">
+      <div className="mb-4 p-3 bg-light rounded-3 shadow-sm">
+        <h5 className="mb-3">
+          <i className="fas fa-tools me-2 text-primary"></i>
+          Bulk Actions
+        </h5>
+        <div className="btn-group">
+          <Button
+            variant="success"
+            className="btn-animated me-2"
+            disabled={selectedMachines.length === 0}
+            onClick={() => onAction(selectedMachines, 'wake')}
+          >
+            <i className="fas fa-power-off me-2"></i> 
+            Start Selected ({selectedMachines.length})
+          </Button>
+          <Button
+            variant="warning"
+            className="btn-animated me-2"
+            disabled={selectedMachines.length === 0}
+            onClick={() => onAction(selectedMachines, 'restart')}
+          >
+            <i className="fas fa-redo me-2"></i> 
+            Restart Selected ({selectedMachines.length})
+          </Button>
+          <Button
+            variant="danger"
+            className="btn-animated"
+            disabled={selectedMachines.length === 0}
+            onClick={() => onAction(selectedMachines, 'shutdown')}
+          >
+            <i className="fas fa-power-off me-2"></i> 
+            Shutdown Selected ({selectedMachines.length})
+          </Button>
+        </div>
+        {selectedMachines.length > 0 && (
+          <div className="mt-2">
+            <small className="text-muted">
+              <i className="fas fa-info-circle me-1"></i>
+              {selectedMachines.length} PC(s) selected for bulk action
+            </small>
+          </div>
+        )}
       </div>
 
-      <Table striped bordered hover>
-        <thead>
+      <Table striped bordered hover responsive className="shadow-sm rounded-3 overflow-hidden">
+        <thead className="table-dark">
           <tr>
-            <th></th>
-            <th>Name</th>
-            <th>IP Address</th>
-            <th>MAC Address</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th width="50">
+              <div className="custom-checkbox">
+                <input
+                  type="checkbox"
+                  id="select-all-machines"
+                  className="curved-checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedMachines(machines.map(m => m.id));
+                    } else {
+                      setSelectedMachines([]);
+                    }
+                  }}
+                  checked={selectedMachines.length === machines.length && machines.length > 0}
+                />
+                <label htmlFor="select-all-machines" className="checkbox-label"></label>
+              </div>
+            </th>
+            <th><i className="fas fa-tag me-2"></i>Name</th>
+            <th><i className="fas fa-globe me-2"></i>IP Address</th>
+            <th><i className="fas fa-network-wired me-2"></i>MAC Address</th>
+            <th><i className="fas fa-signal me-2"></i>Status</th>
+            <th width="400"><i className="fas fa-cogs me-2"></i>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {machines.map(machine => (
-            <tr key={machine.id}>
+          {machines.map((machine, index) => (
+            <tr key={machine.id} className="table-row" style={{animationDelay: `${index * 0.1}s`}}>
               <td>
-                <input
-                  type="checkbox"
-                  onChange={e => handleMachineSelect(machine.id, e.target.checked)}
-                />
+                <div className="custom-checkbox">
+                  <input
+                    type="checkbox"
+                    id={`machine-${machine.id}`}
+                    className="curved-checkbox"
+                    onChange={e => handleMachineSelect(machine.id, e.target.checked)}
+                    checked={selectedMachines.includes(machine.id)}
+                  />
+                  <label htmlFor={`machine-${machine.id}`} className="checkbox-label"></label>
+                </div>
               </td>
-              <td>{machine.name}</td>
-              <td>{machine.ip_address}</td>
-              <td>{machine.mac_address}</td>
               <td>
-                <span className="badge bg-success">Active</span>
+                <strong className="text-primary">
+                  <i className="fas fa-desktop me-2"></i>
+                  {machine.name}
+                </strong>
               </td>
               <td>
-                <Button
-                  variant="success"
+                <code className="bg-light p-1 rounded">{machine.ip_address}</code>
+              </td>
+              <td>
+                <code className="bg-light p-1 rounded">{machine.mac_address}</code>
+              </td>
+              <td>
+                {getStatusBadge(machine)}
+              </td>
+              <td>
+                <DropdownButton
+                  id={`machine-actions-${machine.id}`}
+                  title={
+                    <>
+                      <i className="fas fa-cog me-2"></i>
+                      Actions
+                    </>
+                  }
+                  variant="outline-primary"
                   size="sm"
-                  className="me-2"
-                  onClick={() => onAction([machine.id], 'wake')}
+                  style={{ minWidth: '120px' }}
                 >
-                  <i className="fas fa-power-off"></i> Start
-                </Button>
-                <Button
-                  variant="warning"
-                  size="sm"
-                  className="me-2"
-                  onClick={() => onAction([machine.id], 'restart')}
-                >
-                  <i className="fas fa-redo"></i> Restart
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => onAction([machine.id], 'shutdown')}
-                >
-                  <i className="fas fa-power-off"></i> Shutdown
-                </Button>
+                  <Dropdown.Item 
+                    onClick={() => onAction([machine.id], 'wake')}
+                    className="text-success"
+                  >
+                    <i className="fas fa-play me-2"></i>Start
+                  </Dropdown.Item>
+                  <Dropdown.Item 
+                    onClick={() => onAction([machine.id], 'shutdown')}
+                    className="text-danger"
+                  >
+                    <i className="fas fa-power-off me-2"></i>Shutdown
+                  </Dropdown.Item>
+                  <Dropdown.Item 
+                    onClick={() => onAction([machine.id], 'restart')}
+                    className="text-warning"
+                  >
+                    <i className="fas fa-redo me-2"></i>Restart
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item 
+                    onClick={() => onEdit(machine)}
+                    className="text-info"
+                  >
+                    <i className="fas fa-edit me-2"></i>Edit
+                  </Dropdown.Item>
+                  <Dropdown.Item 
+                    onClick={() => onDelete(machine.id)}
+                    className="text-danger"
+                  >
+                    <i className="fas fa-trash me-2"></i>Delete
+                  </Dropdown.Item>
+                </DropdownButton>
               </td>
             </tr>
           ))}
         </tbody>
       </Table>
-    </>
+      
+      {machines.length === 0 && (
+        <div className="text-center p-5">
+          <i className="fas fa-server fa-3x text-muted mb-3"></i>
+          <h5 className="text-muted">No machines found</h5>
+          <p className="text-muted">Click "Add Machine" to get started</p>
+        </div>
+      )}
+    </div>
   );
 }
 

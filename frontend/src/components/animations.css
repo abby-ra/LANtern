@@ -1,0 +1,372 @@
+/* LANtern - Tailwind CSS Custom Styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom component classes using Tailwind utilities */
+@layer components {
+  /* Unified Navigation Bar */
+  .unified-nav-bar {
+    @apply bg-gray-50 border-b-2 border-gray-200 py-4 mb-8 shadow-light;
+  }
+
+  .nav-content {
+    @apply flex items-center justify-between flex-wrap gap-4;
+  }
+
+  .brand-section {
+    @apply flex items-center gap-8;
+  }
+
+  .brand-logo {
+    @apply text-accent-800 text-3xl font-bold no-underline hover:text-primary-500 transition-colors duration-200;
+  }
+
+  .nav-actions {
+    @apply flex items-center gap-4 flex-wrap;
+  }
+
+  .action-btn {
+    @apply bg-primary-500 text-white px-5 py-3 rounded-lg font-medium text-sm 
+           transition-all duration-200 no-underline inline-flex items-center gap-2
+           hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .action-btn.secondary {
+    @apply bg-gray-100 text-accent-800 border border-gray-200
+           hover:bg-blue-50 hover:border-primary-500;
+  }
+
+  /* Card Components */
+  .card-custom {
+    @apply bg-gray-50 border border-gray-200 rounded-xl shadow-light mb-6 
+           transition-all duration-200 hover:shadow-medium hover:-translate-y-1;
+  }
+
+  .card-header-custom {
+    @apply bg-gray-100 border-b border-gray-200 text-accent-800 font-semibold 
+           rounded-t-xl px-6 py-4;
+  }
+
+  .card-body-custom {
+    @apply p-6;
+  }
+
+  /* Button Components */
+  .btn-primary-custom {
+    @apply bg-primary-500 text-white px-5 py-3 rounded-lg font-medium 
+           transition-all duration-200 border-none
+           hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .btn-secondary-custom {
+    @apply bg-gray-100 text-accent-800 border border-gray-200 px-5 py-3 rounded-lg 
+           font-medium transition-all duration-200
+           hover:bg-blue-50 hover:border-primary-500;
+  }
+
+  .btn-outline-custom {
+    @apply border border-primary-500 text-primary-500 bg-transparent px-5 py-3 
+           rounded-lg font-medium transition-all duration-200
+           hover:bg-primary-500 hover:text-white;
+  }
+
+  /* Table Components */
+  .table-custom {
+    @apply bg-gray-50 text-accent-800 rounded-lg overflow-hidden shadow-light;
+  }
+
+  .table-header-custom {
+    @apply bg-gray-100 text-accent-800 font-semibold border-b-2 border-gray-200 px-3 py-4;
+  }
+
+  .table-cell-custom {
+    @apply text-accent-800 px-3 py-4 border-b border-gray-200;
+  }
+
+  .table-row-custom {
+    @apply transition-all duration-200 hover:bg-blue-50;
+  }
+
+  /* Modal Components */
+  .modal-custom {
+    @apply border-none rounded-xl shadow-heavy bg-gray-50;
+  }
+
+  .modal-header-custom {
+    @apply bg-gray-100 border-b border-gray-200 rounded-t-xl text-accent-800 font-semibold;
+  }
+
+  .modal-body-custom {
+    @apply bg-gray-50 text-accent-800;
+  }
+
+  .modal-footer-custom {
+    @apply bg-gray-50 border-t border-gray-200 rounded-b-xl;
+  }
+
+  /* Form Components */
+  .form-control-custom {
+    @apply border border-gray-200 rounded-lg px-3 py-3 bg-gray-50 text-accent-800 
+           transition-all duration-200
+           focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:bg-gray-50;
+  }
+
+  .form-label-custom {
+    @apply text-accent-800 font-medium mb-2;
+  }
+
+  /* Dropdown Components */
+  .dropdown-menu-custom {
+    @apply border border-gray-200 rounded-lg shadow-medium bg-gray-50;
+  }
+
+  .dropdown-item-custom {
+    @apply text-accent-800 px-4 py-3 transition-all duration-200
+           hover:bg-blue-50 focus:bg-blue-50;
+  }
+
+  /* Alert Components */
+  .alert-custom {
+    @apply border-none rounded-lg px-5 py-4 mb-4;
+  }
+
+  .alert-success-custom {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .alert-danger-custom {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .alert-warning-custom {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  /* Page Container */
+  .page-container-custom {
+    @apply p-0 bg-gray-50 min-h-screen;
+  }
+
+  /* Loading Spinner */
+  .loading-spinner-custom {
+    @apply inline-block w-5 h-5 border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin;
+  }
+
+  /* Badge Components */
+  .badge-custom {
+    @apply font-medium px-3 py-2 rounded-md;
+  }
+
+  .badge-success-custom {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-danger-custom {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .badge-warning-custom {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-info-custom {
+    @apply bg-blue-100 text-blue-800;
+  }
+}
+
+/* Responsive utilities */
+@layer utilities {
+  .animation-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .animation-slide-in-right {
+    animation: slideInRight 0.7s ease-out;
+  }
+
+  .animation-scale-in {
+    animation: scaleIn 0.5s ease-out;
+  }
+
+  .animation-bounce-in {
+    animation: bounceIn 0.5s ease-out;
+  }
+}
+
+/* Override Bootstrap classes with Tailwind equivalents */
+.container, .container-fluid {
+  @apply bg-gray-50 !important;
+}
+
+/* Ensure text colors are consistent */
+.text-primary {
+  @apply text-accent-800 !important;
+}
+
+.text-secondary {
+  @apply text-gray-600 !important;
+}
+
+.text-muted {
+  @apply text-gray-600 !important;
+}
+
+/* Curved Checkboxes */
+.custom-checkbox {
+  position: relative;
+  display: inline-block;
+}
+
+.curved-checkbox {
+  opacity: 0;
+  position: absolute;
+  z-index: -1;
+}
+
+.checkbox-label {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: #ffffff;
+  border: 2px solid #3498DB;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 0;
+}
+
+.checkbox-label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 8px;
+  height: 8px;
+  background-color: #3498DB;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.curved-checkbox:checked + .checkbox-label {
+  background-color: #3498DB;
+  border-color: #2980B9;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.curved-checkbox:checked + .checkbox-label::after {
+  transform: translate(-50%, -50%) scale(1);
+  background-color: #ffffff;
+}
+
+.checkbox-label:hover {
+  border-color: #2980B9;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.15);
+}
+
+.curved-checkbox:focus + .checkbox-label {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+/* Ping Button Styling - Updated for integrated status */
+.ping-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #ffc107;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ping-btn {
+  min-width: 36px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #6c757d;
+  background-color: transparent;
+  color: #6c757d;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ping-btn:hover {
+  background-color: #3498DB;
+  border-color: #3498DB;
+  color: white;
+  transform: scale(1.1);
+}
+
+.ping-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Status Badge Enhancements */
+.status-indicator {
+  min-width: 90px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: help;
+}
+
+.status-indicator.active {
+  background-color: #d4edda !important;
+  color: #155724 !important;
+  border: 1px solid #c3e6cb;
+}
+
+.status-indicator.idle {
+  background-color: #f8d7da !important;
+  color: #721c24 !important;
+  border: 1px solid #f5c6cb;
+}
+
+.status-indicator:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Improved Table Styling */
+.table-row:hover .curved-checkbox + .checkbox-label {
+  border-color: #2980B9;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.15);
+}
+
+/* Real-time status updates animation */
+.status-indicator {
+  animation: statusUpdate 0.3s ease-in-out;
+}
+
+@keyframes statusUpdate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* PC Icon Enhancement */
+.fa-desktop {
+  color: #3498DB;
+}
+
+.table-row:hover .fa-desktop {
+  color: #2980B9;
+}

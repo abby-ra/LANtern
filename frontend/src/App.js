@@ -1,18 +1,20 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import MachinesPage from './pages/MachinesPage';
 import ClustersPage from './pages/ClustersPage';
 
 function App() {
   return (
-    <div className="container mt-4">
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<MachinesPage />} />
-        <Route path="/machines" element={<MachinesPage />} />
-        <Route path="/clusters" element={<ClustersPage />} />
-      </Routes>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex-grow">
+        <Routes>
+          <Route path="/" element={<MachinesPage />} />
+          <Route path="/machines" element={<MachinesPage />} />
+          <Route path="/clusters" element={<ClustersPage />} />
+        </Routes>
+      </div>
+      <Footer />
     </div>
   );
 }

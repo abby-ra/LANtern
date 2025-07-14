@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Modal, Button, Form, Table, Alert, Card, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:3001/api';
+
 const ClusterManager = ({ show, onHide, machines, onClusterCreated }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -17,17 +19,34 @@ const ClusterManager = ({ show, onHide, machines, onClusterCreated }) => {
     };
 
     const handleSubmit = async () => {
+        // Validation
+        if (!name.trim()) {
+            setAlert({ show: true, message: 'Please enter a cluster name', variant: 'danger' });
+            return;
+        }
+        
+        if (selectedMachines.length === 0) {
+            setAlert({ show: true, message: 'Please select at least one machine', variant: 'danger' });
+            return;
+        }
+
         try {
-            await axios.post('/api/clusters', {
+            console.log('Creating cluster with:', { name, description, machineIds: selectedMachines });
+            await axios.post(`${API_BASE_URL}/clusters`, {
                 name,
                 description,
                 machineIds: selectedMachines
             });
             onClusterCreated();
             onHide();
+            // Reset form
+            setName('');
+            setDescription('');
+            setSelectedMachines([]);
             setAlert({ show: true, message: 'Cluster created successfully', variant: 'success' });
         } catch (err) {
-            setAlert({ show: true, message: 'Failed to create cluster', variant: 'danger' });
+            console.error('Cluster creation failed:', err);
+            setAlert({ show: true, message: 'Failed to create cluster: ' + (err.response?.data?.error || err.message), variant: 'danger' });
         }
     };
 
