@@ -1,0 +1,688 @@
+/* Professional animations and styles for LANtern */
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in animation */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide in from right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from left */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Bounce in */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse animation for buttons */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+  }
+}
+
+/* Loading spinner */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Gradient animation */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Page container animations */
+.page-container {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.page-header {
+  animation: slideInRight 0.7s ease-out;
+}
+
+/* Card animations */
+.machine-card, .cluster-card {
+  animation: scaleIn 0.5s ease-out;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.machine-card:hover, .cluster-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Cluster Card Styles */
+.cluster-card {
+  transition: all 0.3s ease;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.cluster-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15) !important;
+}
+
+.cluster-card .card-body {
+  padding: 1.5rem;
+}
+
+.cluster-card .card-title {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.cluster-card .dropdown-toggle {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.cluster-card .dropdown-toggle:hover {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: white;
+}
+
+.cluster-card .dropdown-menu {
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.cluster-card .dropdown-item {
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.cluster-card .dropdown-item:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+  transform: translateX(2px);
+}
+
+/* Ensure cluster dropdown visibility and proper styling */
+.cluster-card .dropdown-menu {
+  display: block !important;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.cluster-card .dropdown.show .dropdown-menu {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+}
+
+.cluster-card .dropdown-toggle::after {
+  margin-left: 0.5em;
+}
+
+/* Ensure dropdown button is clickable */
+.cluster-card .dropdown-toggle {
+  cursor: pointer !important;
+  user-select: none;
+}
+
+.cluster-card .dropdown-item {
+  cursor: pointer !important;
+  white-space: nowrap;
+}
+
+/* Table animations */
+.table-container {
+  animation: fadeIn 0.8s ease-out;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.table-row {
+  animation: fadeIn 0.3s ease-out;
+  transition: all 0.2s ease;
+}
+
+.table-row:hover {
+  background-color: rgba(0, 123, 255, 0.05) !important;
+  transform: translateX(3px);
+}
+
+/* Button animations */
+.btn-animated {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-animated:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-animated:active {
+  transform: translateY(0);
+}
+
+.btn-primary.btn-animated:hover {
+  background-color: #0056b3;
+  animation: pulse 1.5s infinite;
+}
+
+/* Modal animations */
+.modal.fade .modal-dialog {
+  transform: translateY(-50px);
+  transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+  transform: translateY(0);
+  animation: bounceIn 0.5s ease-out;
+}
+
+.modal-content {
+  border-radius: 15px;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px 15px 0 0;
+  border-bottom: none;
+}
+
+.modal-title {
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Form enhancements */
+.form-control {
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+  padding: 12px 15px;
+}
+
+.form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  transform: translateY(-1px);
+}
+
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+/* Alert animations */
+.alert {
+  animation: slideInRight 0.5s ease-out;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
+}
+
+/* Loading state */
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  margin-left: -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(-45deg, #667eea, #764ba2, #667eea, #764ba2);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+/* Status indicators */
+.status-indicator {
+  position: relative;
+  display: inline-block;
+}
+
+.status-indicator.active::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #28a745;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.idle::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #dc3545;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+/* Pulse animation for idle status (red) */
+@keyframes pulseRed {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+/* Apply red pulse to idle status */
+.status-indicator.idle {
+  animation: pulseRed 2s infinite;
+}
+
+/* Button groups */
+.btn-group .btn {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.btn-group .btn:last-child {
+  margin-right: 0;
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+  }
+  
+  .btn-group .btn {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .machine-card, .cluster-card {
+    background-color: #343a40;
+    color: #fff;
+  }
+  
+  .table-row:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
+}
+
+/* Professional scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.fade-in-up {
+  animation: fadeIn 0.8s ease-out;
+}
+
+/* Fix dropdown flickering in MachineTable */
+.machine-table-container .dropdown-button {
+  position: relative;
+  z-index: 10;
+}
+
+.machine-table-container .dropdown-menu {
+  position: absolute !important;
+  z-index: 1050 !important;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin-top: 2px;
+  min-width: 160px;
+}
+
+.machine-table-container .dropdown-toggle {
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  position: relative;
+  z-index: 5;
+}
+
+.machine-table-container .dropdown-toggle:hover {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: white !important;
+  transform: none !important;
+}
+
+.machine-table-container .dropdown-toggle:focus,
+.machine-table-container .dropdown-toggle:active {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.machine-table-container .dropdown-item {
+  padding: 0.65rem 1rem;
+  transition: all 0.15s ease;
+  border: none;
+  background: transparent;
+}
+
+.machine-table-container .dropdown-item:hover {
+  background-color: rgba(0, 123, 255, 0.08) !important;
+  transform: none !important;
+  color: inherit !important;
+}
+
+.machine-table-container .dropdown-item:focus {
+  background-color: rgba(0, 123, 255, 0.08) !important;
+  color: inherit !important;
+  outline: none !important;
+}
+
+.machine-table-container .dropdown-item:active {
+  background-color: rgba(0, 123, 255, 0.15) !important;
+  color: inherit !important;
+}
+
+/* Prevent table row hover interference */
+.machine-table-container .table-row:has(.dropdown.show) {
+  background-color: inherit !important;
+  transform: none !important;
+}
+
+.machine-table-container .table-row:has(.dropdown-toggle:hover) {
+  background-color: inherit !important;
+  transform: none !important;
+}
+
+/* Fix dropdown flickering in ClusterCard */
+.cluster-card .dropdown-button {
+  position: relative;
+  z-index: 10;
+}
+
+.cluster-card .dropdown-menu {
+  position: absolute !important;
+  z-index: 1050 !important;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin-top: 2px;
+  min-width: 160px;
+  top: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  display: block !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.cluster-card .dropdown.show .dropdown-menu {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+.cluster-card .dropdown-toggle {
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  position: relative;
+  z-index: 5;
+}
+
+.cluster-card .dropdown-toggle:hover {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: white !important;
+  transform: none !important;
+}
+
+.cluster-card .dropdown-toggle:focus,
+.cluster-card .dropdown-toggle:active {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.cluster-card .dropdown-item {
+  padding: 0.65rem 1rem;
+  transition: all 0.15s ease;
+  border: none;
+  background: transparent;
+}
+
+.cluster-card .dropdown-item:hover {
+  background-color: rgba(0, 123, 255, 0.08) !important;
+  transform: none !important;
+  color: inherit !important;
+}
+
+.cluster-card .dropdown-item:focus {
+  background-color: rgba(0, 123, 255, 0.08) !important;
+  color: inherit !important;
+  outline: none !important;
+}
+
+.cluster-card .dropdown-item:active {
+  background-color: rgba(0, 123, 255, 0.15) !important;
+  color: inherit !important;
+}
+
+/* Prevent card hover interference */
+.cluster-card:has(.dropdown.show) {
+  transform: none !important;
+}
+
+.cluster-card:has(.dropdown-toggle:hover) {
+  transform: none !important;
+}
+
+/* Prevent card overflow issues with dropdowns */
+.clusters-container {
+  overflow: visible !important;
+}
+
+.clusters-container .row {
+  overflow: visible !important;
+}
+
+.clusters-container .col-lg-6,
+.clusters-container .col-xl-4 {
+  overflow: visible !important;
+}
+
+.cluster-card {
+  overflow: visible !important;
+  position: relative;
+}
+
+.cluster-card .card-body {
+  overflow: visible !important;
+}
+
+/* LANtern Color Scheme - Based on provided palette */
+:root {
+  --lantern-gold: #B8860B;
+  --lantern-cream: #F5F5DC;
+  --lantern-dark-green: #2F4F2F;
+  --lantern-light-gold: #DAA520;
+  --text-primary: #000000;
+  --text-secondary: #333333;
+}
+
+/* Global text color overrides */
+body, .text-primary, .card-title, .table, .btn, .navbar-brand, .nav-link {
+  color: var(--text-primary) !important;
+}
+
+.text-muted {
+  color: var(--text-secondary) !important;
+}
+
+/* Primary color scheme updates */
+.bg-primary, .btn-primary, .gradient-bg {
+  background-color: var(--lantern-gold) !important;
+  border-color: var(--lantern-gold) !important;
+  color: var(--text-primary) !important;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+  background-color: var(--lantern-light-gold) !important;
+  border-color: var(--lantern-light-gold) !important;
+  color: var(--text-primary) !important;
+}
+
+.btn-outline-primary {
+  border-color: var(--lantern-gold) !important;
+  color: var(--text-primary) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--lantern-gold) !important;
+  border-color: var(--lantern-gold) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Card and container backgrounds */
+.card, .page-container {
+  background-color: var(--lantern-cream) !important;
+  color: var(--text-primary) !important;
+}
+
+.card-header {
+  background-color: var(--lantern-gold) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Table styling */
+.table-dark thead th {
+  background-color: var(--lantern-dark-green) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ...existing animations... */

@@ -74,7 +74,7 @@ app.post('/api/machines', async (req, res) => {
         console.log('Creating machine with:', { name, mac_address, ip_address, subnet_mask, broadcast_address, username, password: '***' });
         
         const [result] = await db.query(
-            'INSERT INTO machines (name, mac_address, ip_address, subnet_mask, broadcast_address, username, password) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO machines (name, mac_address, ip_address, subnet_mask, broadcast_address, username, encrypted_password) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [name, mac_address, ip_address, subnet_mask, broadcast_address, username, password]
         );
         
@@ -172,7 +172,7 @@ app.post('/api/machines/cluster-action', async (req, res) => {
                     });
                 } else {
                     // Use password from database
-                    const password = machine.password;
+                    const password = machine.encrypted_password;
                     await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
                 await db.query(
@@ -324,7 +324,7 @@ app.post('/api/clusters/:id/action', async (req, res) => {
                     });
                 } else {
                     // Use password from database
-                    const password = machine.password;
+                    const password = machine.encrypted_password;
                     await remoteShutdown(machine.ip_address, machine.username, password, action);
                 }
                 await db.query(
@@ -345,6 +345,66 @@ app.post('/api/clusters/:id/action', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to perform cluster action' });
+    }
+});
+
+app.put('/api/machines/:id', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        const { name, mac_address, ip_address, subnet_mask, broadcast_address, username, password } = req.body;
+        
+        console.log('Updating machine with ID:', machineId, { name, mac_address, ip_address, subnet_mask, broadcast_address, username, password: '***' });
+        
+        await db.query(
+            'UPDATE machines SET name = ?, mac_address = ?, ip_address = ?, subnet_mask = ?, broadcast_address = ?, username = ?, encrypted_password = ? WHERE id = ?',
+            [name, mac_address, ip_address, subnet_mask, broadcast_address, username, password, machineId]
+        );
+        
+        console.log('Machine updated successfully');
+        res.json({ message: 'Machine updated successfully' });
+    } catch (err) {
+        console.error('Machine update error:', err);
+        res.status(500).json({ error: 'Failed to update machine' });
+    }
+});
+
+app.delete('/api/machines/:id', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        
+        console.log('Deleting machine with ID:', machineId);
+        
+        // First, remove machine from any clusters
+        await db.query('DELETE FROM machine_cluster WHERE machine_id = ?', [machineId]);
+        
+        // Then delete the machine
+        await db.query('DELETE FROM machines WHERE id = ?', [machineId]);
+        
+        console.log('Machine deleted successfully');
+        res.json({ message: 'Machine deleted successfully' });
+    } catch (err) {
+        console.error('Machine deletion error:', err);
+        res.status(500).json({ error: 'Failed to delete machine' });
+    }
+});
+
+app.patch('/api/machines/:id/status', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        const { is_active } = req.body;
+        
+        console.log('Updating machine status:', machineId, 'to', is_active);
+        
+        await db.query(
+            'UPDATE machines SET is_active = ? WHERE id = ?',
+            [is_active, machineId]
+        );
+        
+        console.log('Machine status updated successfully');
+        res.json({ message: 'Machine status updated successfully' });
+    } catch (err) {
+        console.error('Machine status update error:', err);
+        res.status(500).json({ error: 'Failed to update machine status' });
     }
 });
 

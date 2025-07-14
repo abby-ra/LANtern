@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Alert, Card } from 'react-bootstrap';
+import { Button, Alert, Card, Container } from 'react-bootstrap';
 import axios from 'axios';
 import ClusterManager from '../components/ClusterManager';
 import ClusterCard from '../components/ClusterCard';
+import '../components/animations.css';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -11,11 +12,16 @@ function ClustersPage() {
   const [machines, setMachines] = useState([]);
   const [showClusterManager, setShowClusterManager] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', variant: 'success' });
+  const [loading, setLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCluster, setEditingCluster] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
       await fetchMachines();
       await fetchClusters();
+      setLoading(false);
     };
     loadData();
   }, []);
@@ -51,24 +57,31 @@ function ClustersPage() {
     try {
       await axios.post(`${API_BASE_URL}/clusters/${clusterId}/action`, {
         action,
-        password,
+        password: password || 'admin123', // Using default password like MachinesPage
         initiated_by: 'admin'
       });
-      showAlert(`Cluster ${action} initiated`, 'success');
+      showAlert(`Cluster ${action} initiated successfully! 🎉`, 'success');
       return true;
     } catch (err) {
-      showAlert(`Failed to ${action} cluster`, 'danger');
+      showAlert(`Failed to ${action} cluster. Please try again.`, 'danger');
       return false;
     }
   };
 
+  const handleEditCluster = (cluster) => {
+    setEditingCluster(cluster);
+    setShowEditModal(true);
+  };
+
   const handleDeleteCluster = async (clusterId) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/clusters/${clusterId}`);
-      fetchClusters();
-      showAlert('Cluster deleted successfully', 'success');
-    } catch (err) {
-      showAlert('Failed to delete cluster', 'danger');
+    if (window.confirm('⚠️ Are you sure you want to delete this cluster? This action cannot be undone.')) {
+      try {
+        await axios.delete(`${API_BASE_URL}/clusters/${clusterId}`);
+        fetchClusters();
+        showAlert('Cluster deleted successfully! 🗑️', 'success');
+      } catch (err) {
+        showAlert('Failed to delete cluster. Please try again.', 'danger');
+      }
     }
   };
 
@@ -78,36 +91,78 @@ function ClustersPage() {
   };
 
   return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Cluster Management</h2>
-        <Button variant="primary" onClick={() => setShowClusterManager(true)}>
-          <i className="fas fa-plus"></i> Create Cluster
-        </Button>
+    <Container fluid className="page-container">
+      <div className="d-flex justify-content-between align-items-center mb-4 page-header">
+        <h2 className="gradient-bg p-3 rounded-3 shadow-sm" style={{ color: 'black' }}>
+          <i className="fas fa-layer-group me-2"></i>
+          Cluster Management
+        </h2>
+        <div>
+          <Button 
+            variant="primary" 
+            className="btn-animated"
+            onClick={() => setShowClusterManager(true)}
+          >
+            <i className="fas fa-plus me-2"></i> Create Cluster
+          </Button>
+        </div>
       </div>
 
       {alert.show && (
-        <Alert variant={alert.variant} onClose={() => setAlert({ ...alert, show: false })} dismissible>
+        <Alert 
+          variant={alert.variant} 
+          onClose={() => setAlert({ ...alert, show: false })} 
+          dismissible
+          className="shadow-sm"
+        >
           {alert.message}
         </Alert>
       )}
 
-      {clusters.length === 0 ? (
-        <Card>
-          <Card.Body>
-            <p className="text-center">No clusters defined yet. Create one to manage groups of machines.</p>
-          </Card.Body>
-        </Card>
-      ) : (
-        clusters.map(cluster => (
-          <ClusterCard
-            key={cluster.id}
-            cluster={cluster}
-            onClusterAction={handleClusterPowerAction}
-            onDelete={handleDeleteCluster}
-          />
-        ))
-      )}
+      <div className="clusters-container">
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary loading-spinner" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-3 text-muted">Loading clusters...</p>
+          </div>
+        ) : (
+          <div className="slide-in-left">
+            {clusters.length === 0 ? (
+              <Card className="shadow-sm border-0">
+                <Card.Body className="text-center py-5">
+                  <div className="mb-3">
+                    <i className="fas fa-layer-group fa-3x text-muted"></i>
+                  </div>
+                  <h5 className="text-muted mb-2">No clusters defined yet</h5>
+                  <p className="text-muted">Create your first cluster to manage groups of machines efficiently.</p>
+                  <Button 
+                    variant="primary" 
+                    className="btn-animated mt-3"
+                    onClick={() => setShowClusterManager(true)}
+                  >
+                    <i className="fas fa-plus me-2"></i>Create Your First Cluster
+                  </Button>
+                </Card.Body>
+              </Card>
+            ) : (
+              <div className="row g-4">
+                {clusters.map(cluster => (
+                  <div key={cluster.id} className="col-lg-6 col-xl-4">
+                    <ClusterCard
+                      cluster={cluster}
+                      onClusterAction={handleClusterPowerAction}
+                      onEdit={handleEditCluster}
+                      onDelete={handleDeleteCluster}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <ClusterManager
         show={showClusterManager}
@@ -115,7 +170,7 @@ function ClustersPage() {
         machines={machines}
         onClusterCreated={fetchClusters}
       />
-    </>
+    </Container>
   );
 }
 
