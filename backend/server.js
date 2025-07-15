@@ -177,8 +177,8 @@ app.post('/api/machines/cluster-action', async (req, res) => {
         const [machines] = await db.query('SELECT * FROM machines WHERE id IN (?)', [machineIds]);
         console.log(`Found ${machines.length} machines in database`);
         
-        const results = [];
-        for (const machine of machines) {
+        // Execute all commands in parallel for better performance
+        const machinePromises = machines.map(async (machine) => {
             console.log(`\nProcessing machine: ${machine.name} (${machine.ip_address})`);
             try {
                 if (action === 'wake') {
@@ -199,17 +199,34 @@ app.post('/api/machines/cluster-action', async (req, res) => {
                     'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                     [machine.id, action, 'success', initiated_by || 'system']
                 );
-                results.push({ machineId: machine.id, status: 'success' });
+                return { machineId: machine.id, status: 'success' };
             } catch (err) {
                 console.error(`Failed to ${action} machine ${machine.id}:`, err);
                 await db.query(
                     'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                     [machine.id, action, 'failed', initiated_by || 'system']
                 );
-                results.push({ machineId: machine.id, status: 'failed', error: err.message });
+                return { machineId: machine.id, status: 'failed', error: err.message };
             }
-        }
-        res.json({ results });
+        });
+
+        // Wait for all parallel operations to complete
+        const results = await Promise.allSettled(machinePromises);
+        
+        // Process results from Promise.allSettled
+        const processedResults = results.map((result, index) => {
+            if (result.status === 'fulfilled') {
+                return result.value;
+            } else {
+                console.error(`Promise rejected for machine ${machines[index].id}:`, result.reason);
+                return { 
+                    machineId: machines[index].id, 
+                    status: 'failed', 
+                    error: result.reason?.message || 'Unknown error' 
+                };
+            }
+        });
+        res.json({ results: processedResults });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to perform cluster action' });
@@ -424,8 +441,8 @@ app.post('/api/clusters/:id/action', async (req, res) => {
             return res.status(400).json({ error: 'Cluster has no machines' });
         }
         
-        const results = [];
-        for (const machine of machines) {
+        // Execute all commands in parallel for better performance
+        const machinePromises = machines.map(async (machine) => {
             try {
                 if (action === 'wake') {
                     await new Promise((resolve, reject) => {
@@ -443,17 +460,34 @@ app.post('/api/clusters/:id/action', async (req, res) => {
                     'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                     [machine.id, action, 'success', initiated_by || 'system']
                 );
-                results.push({ machineId: machine.id, status: 'success' });
+                return { machineId: machine.id, status: 'success' };
             } catch (err) {
                 console.error(`Failed to ${action} machine ${machine.id}:`, err);
                 await db.query(
                     'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                     [machine.id, action, 'failed', initiated_by || 'system']
                 );
-                results.push({ machineId: machine.id, status: 'failed', error: err.message });
+                return { machineId: machine.id, status: 'failed', error: err.message };
             }
-        }
-        res.json({ results });
+        });
+
+        // Wait for all parallel operations to complete
+        const results = await Promise.allSettled(machinePromises);
+        
+        // Process results from Promise.allSettled
+        const processedResults = results.map((result, index) => {
+            if (result.status === 'fulfilled') {
+                return result.value;
+            } else {
+                console.error(`Promise rejected for machine ${machines[index].id}:`, result.reason);
+                return { 
+                    machineId: machines[index].id, 
+                    status: 'failed', 
+                    error: result.reason?.message || 'Unknown error' 
+                };
+            }
+        });
+        res.json({ results: processedResults });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to perform cluster action' });
