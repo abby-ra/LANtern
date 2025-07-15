@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Table, Button, Alert, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import './animations.css';
@@ -49,24 +49,7 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
     }
   };
 
-  // Auto-ping every 30 seconds for visible machines
-  useEffect(() => {
-    // Initial ping for all machines
-    machines.forEach(machine => {
-      verifyMachineStatus(machine);
-    });
-
-    // Set up interval for continuous monitoring
-    const interval = setInterval(() => {
-      machines.forEach(machine => {
-        if (!pingInProgress[machine.id]) {
-          verifyMachineStatus(machine);
-        }
-      });
-    }, 30000); // Ping every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [machines]);
+  // Removed auto-ping functionality - only ping when refresh button is clicked
 
   const handleMachineSelect = (machineId, isSelected) => {
     setSelectedMachines(prev =>
@@ -81,6 +64,7 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
     if (pingStatus) {
       return pingStatus.isOnline;
     }
+    // Use database status if no ping has been performed
     return machine.is_active === 1;
   };
 
@@ -107,18 +91,27 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
       );
     }
 
+    // Show if status is from ping or database
+    const statusSource = pingStatus ? 'Live' : 'Last Known';
+    
     return isOnline ? (
-      <Badge bg="success" className="status-indicator active" title={pingStatus?.responseTime ? `Response time: ${pingStatus.responseTime}ms` : 'Machine is online'}>
+      <Badge bg="success" className="status-indicator active" title={pingStatus?.responseTime ? `${statusSource} - Response time: ${pingStatus.responseTime}ms` : `${statusSource} - Machine is online`}>
         <i className="fas fa-circle me-1"></i>
         Active
         {pingStatus?.responseTime && (
           <small className="ms-1">({pingStatus.responseTime}ms)</small>
         )}
+        {!pingStatus && (
+          <small className="ms-1 opacity-75">(Last Known)</small>
+        )}
       </Badge>
     ) : (
-      <Badge bg="danger" className="status-indicator idle" title="Machine is offline or unreachable">
+      <Badge bg="danger" className="status-indicator idle" title={`${statusSource} - Machine is offline or unreachable`}>
         <i className="fas fa-circle me-1"></i>
         Idle
+        {!pingStatus && (
+          <small className="ms-1 opacity-75">(Last Known)</small>
+        )}
       </Badge>
     );
   };
@@ -193,7 +186,27 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
             <th><i className="fas fa-tag me-2"></i>Name</th>
             <th><i className="fas fa-globe me-2"></i>IP Address</th>
             <th><i className="fas fa-network-wired me-2"></i>MAC Address</th>
-            <th><i className="fas fa-signal me-2"></i>Status</th>
+            <th>
+              <div className="d-flex align-items-center gap-2">
+                <i className="fas fa-signal me-2"></i>Status
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="d-flex align-items-center gap-1"
+                  onClick={() => {
+                    machines.forEach(machine => verifyMachineStatus(machine));
+                  }}
+                  disabled={Object.values(pingInProgress).some(Boolean)}
+                  title="Refresh all machine statuses"
+                >
+                  {Object.values(pingInProgress).some(Boolean) ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <i className="fas fa-sync-alt"></i>
+                  )}
+                </Button>
+              </div>
+            </th>
             <th width="400"><i className="fas fa-cogs me-2"></i>Actions</th>
           </tr>
         </thead>

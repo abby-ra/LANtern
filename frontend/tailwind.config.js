@@ -6,7 +6,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // LANtern Clean Theme Colors
+        // LANturn Clean Theme Colors
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',

@@ -1,4 +1,4 @@
-# LANtern 🔦
+# LANturn 🔦
 
 A comprehensive network power management system that allows you to remotely control (wake up, shutdown, restart) machines on your Local Area Network (LAN). Built with React frontend and Express.js backend with MySQL database support.
 
@@ -14,7 +14,7 @@ A comprehensive network power management system that allows you to remotely cont
 ## 🏗️ Architecture
 
 ```
-LANtern/
+LANturn/
 ├── frontend/          # React.js application
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
@@ -58,7 +58,7 @@ LANtern/
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>
-cd LANtern
+cd LANturn
 ```
 
 ### 2. Backend Setup
@@ -184,6 +184,30 @@ The frontend will run on `http://localhost:3000`
 - Administrative shares must be accessible for shutdown operations
 - Firewall rules may need adjustment for remote operations
 
+### Wake-on-LAN Optimization
+The system uses an enhanced Wake-on-LAN implementation for better reliability:
+- **Multiple packet transmission**: Sends 3 packets per target address
+- **Multiple target addresses**: Uses broadcast address, global broadcast (255.255.255.255), and direct IP
+- **Staggered timing**: 100ms delay between packets to prevent network congestion
+- **Enhanced logging**: Detailed packet delivery tracking
+
+### Performance Tips
+1. **Network Infrastructure**:
+   - Ensure network switches support WoL packet forwarding
+   - Use managed switches with WoL pass-through enabled
+   - Consider network segment isolation for better packet delivery
+
+2. **Machine Configuration**:
+   - Enable "Wake on Magic Packet" in BIOS/UEFI
+   - Set network adapter to allow wake from powered-off state
+   - Disable "Fast Startup" in Windows power settings
+   - Configure "Power Management" tab in network adapter properties
+
+3. **Broadcast Address Configuration**:
+   - Use subnet-specific broadcast address (e.g., 192.168.1.255 for 192.168.1.0/24)
+   - Verify broadcast address matches your network configuration
+   - Test with global broadcast (255.255.255.255) if subnet broadcast fails
+
 ## 🔒 Security Considerations
 
 - Passwords are encrypted using bcrypt before storage
@@ -196,10 +220,21 @@ The frontend will run on `http://localhost:3000`
 
 ### Common Issues
 
-**Wake-on-LAN not working:**
-- Ensure WoL is enabled in machine BIOS/UEFI
-- Check network switch supports WoL packets
-- Verify MAC address is correct
+**Wake-on-LAN not working or slow:**
+- Ensure WoL is enabled in machine BIOS/UEFI settings
+- Check that "Wake on Magic Packet" is specifically enabled
+- Verify network switch supports WoL packet forwarding
+- Confirm broadcast address is correctly configured for your subnet
+- Disable Windows "Fast Startup" feature
+- Set network adapter power management to "Allow this device to wake the computer"
+- Try different broadcast addresses (subnet-specific vs global broadcast)
+- Check if network adapter supports WoL while computer is completely powered off
+
+**Enhanced WoL features:**
+- System now sends multiple packets (3x) to improve reliability
+- Uses multiple target addresses: subnet broadcast, global broadcast, and direct IP
+- Packets are staggered with 100ms delays to prevent network flooding
+- Monitor backend logs for packet delivery status
 
 **Shutdown operations failing:**
 - Verify admin credentials are correct

@@ -8,7 +8,7 @@ function NavigationBar() {
       <Container>
         <Navbar.Brand as={Link} to="/" style={{ color: 'black', fontWeight: 'bold', fontSize: '1.5rem', backgroundColor: '#F5F5DC', padding: '0.5rem 1rem', borderRadius: '8px' }}>
           <i className="fas fa-network-wired me-2"></i>
-          LANtern
+          LANturn
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">

@@ -107,22 +107,70 @@ app.post('/api/machines/:id/wake', async (req, res) => {
         }
         
         const machine = rows[0];
-        wol.wake(machine.mac_address, { address: machine.broadcast_address }, (err) => {
-            if (err) {
-                console.error('Wake-on-LAN failed:', err);
-                return res.status(500).json({ error: 'Failed to send Wake-on-LAN packet' });
+        
+        // Enhanced Wake-on-LAN with multiple packet transmission
+        const sendMultipleWolPackets = async (macAddress, broadcastAddress) => {
+            const promises = [];
+            const packetCount = 3; // Send 3 packets for reliability
+            const addresses = [
+                broadcastAddress,
+                '255.255.255.255', // Global broadcast
+                machine.ip_address // Direct IP (if machine supports it)
+            ];
+            
+            // Send packets to multiple addresses for better reliability
+            for (const address of addresses) {
+                for (let i = 0; i < packetCount; i++) {
+                    promises.push(
+                        new Promise((resolve, reject) => {
+                            setTimeout(() => {
+                                wol.wake(macAddress, { 
+                                    address: address,
+                                    port: 9 // Standard WoL port
+                                }, (err) => {
+                                    if (err) {
+                                        console.warn(`WoL packet failed to ${address}:`, err.message);
+                                        resolve(false);
+                                    } else {
+                                        console.log(`WoL packet sent successfully to ${address}`);
+                                        resolve(true);
+                                    }
+                                });
+                            }, i * 100); // 100ms delay between packets
+                        })
+                    );
+                }
             }
             
+            return Promise.all(promises);
+        };
+        
+        console.log(`Sending enhanced Wake-on-LAN to ${machine.mac_address}`);
+        const results = await sendMultipleWolPackets(machine.mac_address, machine.broadcast_address);
+        const successCount = results.filter(result => result === true).length;
+        
+        if (successCount > 0) {
             // Log the power event
-            db.query(
+            await db.query(
                 'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
                 [machineId, 'wake', 'success', req.body.initiated_by || 'system']
             );
             
-            res.json({ message: 'Wake-on-LAN packet sent successfully' });
-        });
+            res.json({ 
+                message: `Wake-on-LAN packets sent successfully (${successCount}/${results.length} packets delivered)`,
+                packetsDelivered: successCount,
+                totalPackets: results.length
+            });
+        } else {
+            await db.query(
+                'INSERT INTO power_events (machine_id, action, status, initiated_by) VALUES (?, ?, ?, ?)',
+                [machineId, 'wake', 'failed', req.body.initiated_by || 'system']
+            );
+            
+            res.status(500).json({ error: 'All Wake-on-LAN packets failed to send' });
+        }
     } catch (err) {
-        console.error(err);
+        console.error('Wake-on-LAN error:', err);
         res.status(500).json({ error: 'Failed to wake machine' });
     }
 });
@@ -182,13 +230,54 @@ app.post('/api/machines/cluster-action', async (req, res) => {
             console.log(`\nProcessing machine: ${machine.name} (${machine.ip_address})`);
             try {
                 if (action === 'wake') {
-                    console.log(`Sending Wake-on-LAN to ${machine.mac_address}`);
-                    await new Promise((resolve, reject) => {
-                        wol.wake(machine.mac_address, { address: machine.broadcast_address }, (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    });
+                    // Enhanced Wake-on-LAN with multiple packet transmission
+                    const sendMultipleWolPackets = async (macAddress, broadcastAddress, ipAddress) => {
+                        const promises = [];
+                        const packetCount = 3; // Send 3 packets for reliability
+                        const addresses = [
+                            broadcastAddress,
+                            '255.255.255.255', // Global broadcast
+                            ipAddress // Direct IP (if machine supports it)
+                        ];
+                        
+                        console.log(`Sending enhanced Wake-on-LAN to ${macAddress} via addresses: ${addresses.join(', ')}`);
+                        
+                        // Send packets to multiple addresses for better reliability
+                        for (const address of addresses) {
+                            for (let i = 0; i < packetCount; i++) {
+                                promises.push(
+                                    new Promise((resolve) => {
+                                        setTimeout(() => {
+                                            wol.wake(macAddress, { 
+                                                address: address,
+                                                port: 9 // Standard WoL port
+                                            }, (err) => {
+                                                if (err) {
+                                                    console.warn(`WoL packet failed to ${address}:`, err.message);
+                                                    resolve(false);
+                                                } else {
+                                                    console.log(`WoL packet sent successfully to ${address}`);
+                                                    resolve(true);
+                                                }
+                                            });
+                                        }, i * 100); // 100ms delay between packets
+                                    })
+                                );
+                            }
+                        }
+                        
+                        const results = await Promise.all(promises);
+                        const successCount = results.filter(result => result === true).length;
+                        
+                        if (successCount === 0) {
+                            throw new Error('All Wake-on-LAN packets failed to send');
+                        }
+                        
+                        console.log(`Enhanced WoL completed: ${successCount}/${results.length} packets delivered`);
+                        return { successCount, totalPackets: results.length };
+                    };
+                    
+                    await sendMultipleWolPackets(machine.mac_address, machine.broadcast_address, machine.ip_address);
                 } else {
                     // Use password from database
                     const password = machine.encrypted_password;
@@ -445,12 +534,52 @@ app.post('/api/clusters/:id/action', async (req, res) => {
         const machinePromises = machines.map(async (machine) => {
             try {
                 if (action === 'wake') {
-                    await new Promise((resolve, reject) => {
-                        wol.wake(machine.mac_address, { address: machine.broadcast_address }, (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    });
+                    // Enhanced Wake-on-LAN with multiple packet transmission
+                    const sendMultipleWolPackets = async (macAddress, broadcastAddress, ipAddress) => {
+                        const promises = [];
+                        const packetCount = 3; // Send 3 packets for reliability
+                        const addresses = [
+                            broadcastAddress,
+                            '255.255.255.255', // Global broadcast
+                            ipAddress // Direct IP (if machine supports it)
+                        ];
+                        
+                        // Send packets to multiple addresses for better reliability
+                        for (const address of addresses) {
+                            for (let i = 0; i < packetCount; i++) {
+                                promises.push(
+                                    new Promise((resolve) => {
+                                        setTimeout(() => {
+                                            wol.wake(macAddress, { 
+                                                address: address,
+                                                port: 9 // Standard WoL port
+                                            }, (err) => {
+                                                if (err) {
+                                                    console.warn(`WoL packet failed to ${address}:`, err.message);
+                                                    resolve(false);
+                                                } else {
+                                                    console.log(`WoL packet sent successfully to ${address}`);
+                                                    resolve(true);
+                                                }
+                                            });
+                                        }, i * 100); // 100ms delay between packets
+                                    })
+                                );
+                            }
+                        }
+                        
+                        const results = await Promise.all(promises);
+                        const successCount = results.filter(result => result === true).length;
+                        
+                        if (successCount === 0) {
+                            throw new Error('All Wake-on-LAN packets failed to send');
+                        }
+                        
+                        return { successCount, totalPackets: results.length };
+                    };
+                    
+                    console.log(`Sending enhanced Wake-on-LAN to ${machine.mac_address}`);
+                    await sendMultipleWolPackets(machine.mac_address, machine.broadcast_address, machine.ip_address);
                 } else {
                     // Use password from database
                     const password = machine.encrypted_password;

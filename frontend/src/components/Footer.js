@@ -7,10 +7,10 @@ function Footer() {
         <div className="text-center">
           <div className="mb-2 text-accent-800">
             <i className="fas fa-network-wired mr-2"></i>
-            <strong>LANtern</strong> - Network Management System
+            <strong>LANturn</strong> - Network Management System
           </div>
           <div className="text-sm text-gray-600">
-            © 2025 LANtern Project. All rights reserved.
+            © 2025 LANturn Project. All rights reserved.
           </div>
           {/* <div className="text-xs mt-2 text-gray-600">
             Developed by <strong>Abby Ra</strong> & <strong>Assistant AI</strong>

@@ -103,7 +103,7 @@ function ClustersPage() {
                 className="text-accent-800 text-3xl font-bold no-underline hover:text-primary-500 transition-colors duration-200"
               >
                 <i className="fas fa-network-wired mr-2"></i>
-                LANtern
+                LANturn
               </Link>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
