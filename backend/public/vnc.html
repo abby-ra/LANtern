@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LANtern - Remote Desktop</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #2c3e50;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        .header {
+            background: #34495e;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .connection-info {
+            background: #34495e;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            border-bottom: 1px solid #2c3e50;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.connected {
+            background: #27ae60;
+        }
+        
+        .vnc-container {
+            width: 100%;
+            height: calc(100vh - 120px);
+            background: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid #34495e;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        #noVNC_canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(52, 73, 94, 0.9);
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .control-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: #2980b9;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+            background: rgba(231, 76, 60, 0.1);
+            margin: 20px;
+            border-radius: 4px;
+            border: 1px solid #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>🖥️ LANtern Remote Desktop</h2>
+    </div>
+    
+    <div class="connection-info">
+        <div>
+            <strong>Target:</strong> <span id="machine-name">Loading...</span> 
+            (<span id="machine-ip">-</span>)
+        </div>
+        <div class="status">
+            <div class="status-indicator" id="status-indicator"></div>
+            <span id="connection-status">Connecting...</span>
+        </div>
+    </div>
+    
+    <div class="vnc-container" id="vnc-container">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Establishing remote desktop connection...</p>
+            <small>Please wait while we connect to the target machine</small>
+        </div>
+        
+        <div class="controls" id="controls" style="display: none;">
+            <button class="control-btn" onclick="sendCtrlAltDel()">Ctrl+Alt+Del</button>
+            <button class="control-btn" onclick="toggleFullscreen()">Fullscreen</button>
+            <button class="control-btn" onclick="disconnect()">Disconnect</button>
+        </div>
+        
+        <!-- VNC canvas will be inserted here -->
+    </div>
+
+    <script>
+        // Get connection parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const host = urlParams.get('host') || 'localhost';
+        const port = urlParams.get('port') || '6080';
+        const password = urlParams.get('password') || '';
+        const machineName = urlParams.get('name') || host;
+        
+        // Update UI with machine info
+        document.getElementById('machine-name').textContent = machineName;
+        document.getElementById('machine-ip').textContent = host;
+        
+        // Simulate VNC connection (in a real implementation, you would use noVNC library)
+        setTimeout(() => {
+            const loading = document.getElementById('loading');
+            const statusIndicator = document.getElementById('status-indicator');
+            const connectionStatus = document.getElementById('connection-status');
+            const controls = document.getElementById('controls');
+            
+            // Simulate connection success/failure
+            const isConnected = Math.random() > 0.3; // 70% success rate for demo
+            
+            if (isConnected) {
+                loading.innerHTML = `
+                    <div style="padding: 40px; text-align: center;">
+                        <h3 style="color: #27ae60;">✅ Connected Successfully!</h3>
+                        <p>Remote desktop session established with <strong>${machineName}</strong></p>
+                        <div style="background: #34495e; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p><strong>🖥️ Remote Desktop View</strong></p>
+                            <p style="color: #95a5a6;">In a real implementation, this would show the actual desktop of the remote machine using VNC/RDP protocols.</p>
+                            <div style="background: #2c3e50; padding: 15px; border-radius: 4px; margin: 10px 0;">
+                                <code style="color: #3498db;">Machine: ${machineName} (${host})</code><br>
+                                <code style="color: #3498db;">Protocol: VNC over WebSocket</code><br>
+                                <code style="color: #3498db;">Status: Active Session</code>
+                            </div>
+                        </div>
+                        <small style="color: #95a5a6;">Use the controls in the top-right corner to interact with the session.</small>
+                    </div>
+                `;
+                statusIndicator.classList.add('connected');
+                connectionStatus.textContent = 'Connected';
+                controls.style.display = 'flex';
+            } else {
+                loading.innerHTML = `
+                    <div class="error-message">
+                        <h3>❌ Connection Failed</h3>
+                        <p>Unable to establish remote desktop connection to <strong>${machineName}</strong></p>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>Machine may be offline or unreachable</li>
+                            <li>VNC server may not be running on port ${port}</li>
+                            <li>Firewall may be blocking the connection</li>
+                            <li>Authentication may have failed</li>
+                        </ul>
+                        <button class="control-btn" onclick="retryConnection()" style="margin-top: 15px;">
+                            🔄 Retry Connection
+                        </button>
+                    </div>
+                `;
+                connectionStatus.textContent = 'Connection Failed';
+            }
+        }, 3000);
+        
+        function sendCtrlAltDel() {
+            alert('Ctrl+Alt+Del sent to remote machine (simulated)');
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.getElementById('vnc-container').requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        function disconnect() {
+            if (confirm('Are you sure you want to disconnect from the remote session?')) {
+                window.close();
+            }
+        }
+        
+        function retryConnection() {
+            location.reload();
+        }
+        
+        // Handle fullscreen changes
+        document.addEventListener('fullscreenchange', function() {
+            const controls = document.getElementById('controls');
+            if (document.fullscreenElement) {
+                controls.style.position = 'fixed';
+                controls.style.top = '20px';
+                controls.style.right = '20px';
+            } else {
+                controls.style.position = 'absolute';
+                controls.style.top = '10px';
+                controls.style.right = '10px';
+            }
+        });
+    </script>
+</body>
+</html>

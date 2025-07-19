@@ -657,3 +657,89 @@
   50% { opacity: 0.4; }
   100% { opacity: 1; }
 }
+
+/* Visual Remote Access Modal Styles */
+.visual-remote-access-modal .modal-dialog {
+  max-width: 1400px;
+}
+
+.visual-remote-access-modal .card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.visual-remote-access-modal .card:hover {
+  border-color: #007bff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.visual-remote-access-modal .card.opacity-50 {
+  opacity: 0.6;
+  filter: grayscale(30%);
+}
+
+.visual-remote-access-modal .card.opacity-50:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.visual-remote-access-modal .btn {
+  transition: all 0.3s ease;
+}
+
+.visual-remote-access-modal .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.visual-remote-access-modal .nav-tabs .nav-link {
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6c757d;
+  font-weight: 500;
+  padding: 12px 20px;
+  transition: all 0.3s ease;
+}
+
+.visual-remote-access-modal .nav-tabs .nav-link.active {
+  border-bottom-color: #007bff;
+  color: #007bff;
+  background-color: transparent;
+}
+
+.visual-remote-access-modal .nav-tabs .nav-link:hover {
+  border-bottom-color: #6c757d;
+  color: #495057;
+}
+
+/* Connection status animations */
+.connection-active {
+  animation: pulse-success 2s infinite;
+}
+
+.connection-connecting {
+  animation: pulse-warning 1s infinite;
+}
+
+.connection-error {
+  animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-success {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-warning {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-danger {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}

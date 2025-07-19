@@ -11,6 +11,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Serve static files for web-based remote access
+app.use('/public', express.static('public'));
+app.use('/vnc.html', express.static('public/vnc.html'));
+
 const PORT = process.env.PORT || 3001;
 
 // Database connection
@@ -686,32 +690,48 @@ app.patch('/api/machines/:id/status', async (req, res) => {
 // MeshCentral Integration Endpoints
 app.post('/api/meshcentral/connect', async (req, res) => {
     try {
-        const { serverUrl, username, password, domain = 'default' } = req.body;
+        const { serverUrl, username, password, domain = 'default', machineId } = req.body;
         
-        console.log(`Attempting MeshCentral connection to: ${serverUrl}`);
+        console.log(`Attempting remote access connection for machine ID: ${machineId}`);
+        
+        // Get machine credentials from database
+        let machineCredentials = null;
+        if (machineId) {
+            const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+            if (rows.length > 0) {
+                machineCredentials = rows[0];
+                console.log(`Found machine: ${machineCredentials.name} (${machineCredentials.ip_address})`);
+            }
+        }
         
         // In a real implementation, you would make actual HTTP requests to MeshCentral API
-        // For now, we'll simulate the connection
+        // For now, we'll simulate the connection and use stored machine credentials
         
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Mock response - in real implementation, authenticate with MeshCentral server
+        // Enhanced mock response with machine-specific data
         const mockResponse = {
             success: true,
-            sessionId: 'mock_session_' + Date.now(),
+            sessionId: 'session_' + Date.now(),
             userRights: ['desktop', 'terminal', 'files'],
-            serverVersion: '1.1.24'
+            serverVersion: '1.1.24',
+            machineInfo: machineCredentials ? {
+                id: machineCredentials.id,
+                name: machineCredentials.name,
+                ip: machineCredentials.ip_address,
+                hasCredentials: !!machineCredentials.encrypted_password
+            } : null
         };
         
-        console.log('MeshCentral connection successful');
+        console.log('Remote access connection established');
         res.json(mockResponse);
         
     } catch (err) {
-        console.error('MeshCentral connection failed:', err);
+        console.error('Remote access connection failed:', err);
         res.status(500).json({ 
             success: false, 
-            error: 'Failed to connect to MeshCentral server',
+            error: 'Failed to establish remote access connection',
             details: err.message 
         });
     }
@@ -721,7 +741,7 @@ app.post('/api/meshcentral/nodes', async (req, res) => {
     try {
         const { serverUrl, sessionId, machineId } = req.body;
         
-        // Get machine details from database
+        // Get machine details from database including credentials
         const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
         
         if (rows.length === 0) {
@@ -729,31 +749,140 @@ app.post('/api/meshcentral/nodes', async (req, res) => {
         }
         
         const machine = rows[0];
+        console.log(`Setting up remote access for machine: ${machine.name} (${machine.ip_address})`);
         
-        // In a real implementation, fetch nodes from MeshCentral API
-        // For now, create a mock node based on the machine
-        const mockNodes = [
-            {
-                id: `mesh_node_${machine.id}`,
-                name: machine.name,
-                ip: machine.ip_address,
-                mac: machine.mac_address,
-                status: machine.is_active ? 'online' : 'offline',
-                platform: 'Windows', // Could be determined from machine data
-                lastSeen: new Date().toISOString(),
-                meshId: 'default_mesh',
-                nodeType: 'desktop',
-                capabilities: ['desktop', 'terminal', 'files']
-            }
-        ];
+        // Check if machine credentials are available
+        const hasCredentials = machine.username && machine.encrypted_password;
         
-        console.log(`Found ${mockNodes.length} MeshCentral nodes for machine ${machine.name}`);
-        res.json({ nodes: mockNodes });
+        // Create enhanced node data with multiple access methods
+        const remoteAccessNode = {
+            id: `machine_${machine.id}`,
+            name: machine.name,
+            ip: machine.ip_address,
+            mac: machine.mac_address,
+            status: machine.is_active ? 'online' : 'offline',
+            platform: 'Windows', // Could be determined from machine data or OS detection
+            lastSeen: new Date().toISOString(),
+            meshId: `mesh_${machine.id}`,
+            nodeType: 'desktop',
+            capabilities: ['desktop', 'terminal', 'files'],
+            credentials: {
+                available: hasCredentials,
+                username: machine.username || 'administrator',
+                // Don't send actual password, just indicate availability
+                hasPassword: !!machine.encrypted_password
+            },
+            accessMethods: [
+                {
+                    type: 'rdp',
+                    name: 'Remote Desktop Protocol',
+                    port: 3389,
+                    available: hasCredentials && machine.is_active
+                },
+                {
+                    type: 'vnc', 
+                    name: 'VNC Viewer',
+                    port: 5900,
+                    available: machine.is_active
+                },
+                {
+                    type: 'web_vnc',
+                    name: 'Web-based VNC',
+                    port: 6080,
+                    available: machine.is_active
+                }
+            ]
+        };
+        
+        console.log(`Remote access node configured for ${machine.name} with ${hasCredentials ? 'stored' : 'no'} credentials`);
+        res.json({ nodes: [remoteAccessNode] });
         
     } catch (err) {
-        console.error('Failed to fetch MeshCentral nodes:', err);
+        console.error('Failed to setup remote access node:', err);
         res.status(500).json({ 
-            error: 'Failed to fetch mesh nodes',
+            error: 'Failed to configure remote access',
+            details: err.message 
+        });
+    }
+});
+
+// New endpoint for direct visual remote access
+app.post('/api/remote-access/direct', async (req, res) => {
+    try {
+        const { machineId, accessType = 'rdp' } = req.body;
+        
+        // Get machine with credentials
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        console.log(`Setting up direct ${accessType} access to ${machine.name} (${machine.ip_address})`);
+        
+        // Prepare connection details
+        const connectionDetails = {
+            machineId: machine.id,
+            machineName: machine.name,
+            ipAddress: machine.ip_address,
+            accessType: accessType,
+            isOnline: machine.is_active === 1,
+            credentials: {
+                username: machine.username || 'administrator',
+                hasPassword: !!machine.encrypted_password
+            }
+        };
+        
+        // Generate different connection methods based on access type
+        switch (accessType) {
+            case 'rdp':
+                // Create RDP connection data
+                connectionDetails.rdpFile = {
+                    content: `full address:s:${machine.ip_address}:3389
+username:s:${machine.username || 'administrator'}
+screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1920
+desktopheight:i:1080
+session bpp:i:32
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+displayconnectionbar:i:1
+redirectprinters:i:1
+redirectclipboard:i:1
+autoreconnection enabled:i:1
+authentication level:i:2
+prompt for credentials:i:${machine.encrypted_password ? 0 : 1}`,
+                    filename: `${machine.name.replace(/\s+/g, '_')}_remote.rdp`
+                };
+                break;
+                
+            case 'vnc':
+                connectionDetails.vncUrl = `vnc://${machine.ip_address}:5900`;
+                break;
+                
+            case 'web_vnc':
+                // For web-based VNC, create a URL that opens our custom VNC viewer
+                connectionDetails.webVncUrl = `http://localhost:3001/vnc.html?host=${machine.ip_address}&port=6080&name=${encodeURIComponent(machine.name)}&password=${encodeURIComponent(machine.encrypted_password || '')}`;
+                break;
+                
+            case 'ssh':
+                connectionDetails.sshCommand = `ssh ${machine.username || 'root'}@${machine.ip_address}`;
+                break;
+        }
+        
+        res.json({
+            success: true,
+            connection: connectionDetails
+        });
+        
+    } catch (err) {
+        console.error('Failed to setup direct remote access:', err);
+        res.status(500).json({ 
+            error: 'Failed to setup direct remote access',
             details: err.message 
         });
     }

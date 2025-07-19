@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Table, Button, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
 import axios from 'axios';
-import MeshCentralModal from './MeshCentralModal';
+import VisualRemoteAccessModal from './VisualRemoteAccessModal';
 import './animations.css';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -10,8 +10,8 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [machineStatuses, setMachineStatuses] = useState({});
   const [pingInProgress, setPingInProgress] = useState({});
-  const [showMeshModal, setShowMeshModal] = useState(false);
-  const [selectedMachineForMesh, setSelectedMachineForMesh] = useState(null);
+  const [showVisualRemoteModal, setShowVisualRemoteModal] = useState(false);
+  const [selectedMachineForRemote, setSelectedMachineForRemote] = useState(null);
 
   // Ping verification function
   const verifyMachineStatus = async (machine) => {
@@ -52,10 +52,10 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
     }
   };
 
-  // MeshCentral remote access handler
-  const handleMeshCentralAccess = (machine) => {
-    setSelectedMachineForMesh(machine);
-    setShowMeshModal(true);
+  // Visual remote access handler
+  const handleVisualRemoteAccess = (machine) => {
+    setSelectedMachineForRemote(machine);
+    setShowVisualRemoteModal(true);
   };
 
   // Removed auto-ping functionality - only ping when refresh button is clicked
@@ -282,7 +282,7 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item 
-                    onClick={() => handleMeshCentralAccess(machine)}
+                    onClick={() => handleVisualRemoteAccess(machine)}
                     className="text-primary"
                   >
                     <i className="fas fa-monitor me-2"></i>Remote
@@ -315,14 +315,14 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
         </div>
       )}
 
-      {/* MeshCentral Remote Access Modal */}
-      <MeshCentralModal
-        show={showMeshModal}
+      {/* Visual Remote Access Modal */}
+      <VisualRemoteAccessModal
+        show={showVisualRemoteModal}
         onHide={() => {
-          setShowMeshModal(false);
-          setSelectedMachineForMesh(null);
+          setShowVisualRemoteModal(false);
+          setSelectedMachineForRemote(null);
         }}
-        machine={selectedMachineForMesh}
+        machine={selectedMachineForRemote}
       />
     </div>
   );
