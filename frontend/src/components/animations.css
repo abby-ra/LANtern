@@ -460,16 +460,11 @@
 .cluster-dropdown-item .fa-edit::before { content: "\f044" !important; }
 .cluster-dropdown-item .fa-trash::before { content: "\f1f8" !important; }
 
-/* Remote Access Modal Enhancements - Full Machine Access */
-.remote-access-modal .modal-dialog {
-  max-width: 95vw !important;
-}
-
+/* Remote Access Modal Enhancements */
 .remote-access-modal .modal-content {
   border: none;
   border-radius: 15px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  min-height: 80vh;
 }
 
 .remote-access-modal .modal-header {
@@ -537,57 +532,6 @@
   box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
 }
 
-/* Full Machine Access Interface */
-.remote-desktop-container {
-  position: relative;
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 1rem;
-}
-
-.remote-desktop-frame {
-  position: relative;
-  background: #ffffff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.remote-desktop-frame iframe {
-  border: none !important;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.remote-desktop-frame iframe:hover {
-  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-}
-
-/* Connection loading overlay */
-#connection-loading {
-  animation: connectionPulse 2s infinite;
-}
-
-@keyframes connectionPulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.8; }
-  100% { opacity: 1; }
-}
-
-/* Hide loading overlay after connection */
-.remote-desktop-frame iframe[src]:not([src=""]) ~ #connection-loading {
-  display: none;
-}
-
-/* Full screen enhancements */
-.remote-desktop-frame:-webkit-full-screen iframe,
-.remote-desktop-frame:-moz-full-screen iframe,
-.remote-desktop-frame:fullscreen iframe {
-  width: 100vw !important;
-  height: 100vh !important;
-  border-radius: 0 !important;
-}
-
 /* Machine info badges */
 .machine-info-badge {
   display: inline-block;
@@ -598,12 +542,6 @@
   font-size: 0.875rem;
   font-weight: 500;
   margin: 0.25rem 0.25rem 0.25rem 0;
-  transition: all 0.3s ease;
-}
-
-.machine-info-badge:hover {
-  background: rgba(52, 152, 219, 0.2);
-  transform: scale(1.05);
 }
 
 /* Status indicators for remote access */
@@ -627,59 +565,6 @@
   0% { opacity: 1; }
   50% { opacity: 0.4; }
   100% { opacity: 1; }
-}
-
-/* Tab enhancements */
-.remote-access-modal .nav-tabs {
-  border-bottom: 2px solid #e9ecef;
-}
-
-.remote-access-modal .nav-tabs .nav-link {
-  border: none;
-  border-bottom: 3px solid transparent;
-  font-weight: 500;
-  color: #6c757d;
-  transition: all 0.3s ease;
-}
-
-.remote-access-modal .nav-tabs .nav-link.active {
-  border-bottom-color: #3498DB;
-  color: #3498DB;
-  background: transparent;
-}
-
-.remote-access-modal .nav-tabs .nav-link:hover {
-  border-bottom-color: #85C1E9;
-  color: #2980B9;
-}
-
-/* Connection status indicator in footer */
-.remote-access-modal .modal-footer {
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-top: 1px solid #e9ecef;
-  border-radius: 0 0 15px 15px;
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-  .remote-access-modal .modal-dialog {
-    margin: 10px;
-    max-width: calc(100vw - 20px) !important;
-  }
-  
-  .remote-desktop-frame iframe {
-    height: 500px !important;
-  }
-  
-  .remote-access-modal .modal-body {
-    padding: 1rem;
-  }
-}
-
-/* Desktop focus enhancements */
-.remote-desktop-frame:focus-within {
-  outline: 3px solid rgba(52, 152, 219, 0.3);
-  outline-offset: 2px;
 }.table-row:hover .fa-desktop {
   color: #2980B9;
 }
