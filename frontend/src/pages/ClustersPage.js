@@ -14,7 +14,6 @@ function ClustersPage() {
   const [showClusterManager, setShowClusterManager] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', variant: 'success' });
   const [loading, setLoading] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editingCluster, setEditingCluster] = useState(null);
 
   useEffect(() => {
@@ -71,7 +70,12 @@ function ClustersPage() {
 
   const handleEditCluster = (cluster) => {
     setEditingCluster(cluster);
-    setShowEditModal(true);
+    setShowClusterManager(true);
+  };
+
+  const handleCloseClusterManager = () => {
+    setShowClusterManager(false);
+    setEditingCluster(null);
   };
 
   const handleDeleteCluster = async (clusterId) => {
@@ -130,7 +134,10 @@ function ClustersPage() {
                 Add Machine
               </Button>
               <Button 
-                onClick={() => setShowClusterManager(true)} 
+                onClick={() => {
+                  setEditingCluster(null);
+                  setShowClusterManager(true);
+                }} 
                 className="bg-primary-500 text-white px-5 py-3 rounded-lg font-medium text-sm transition-all duration-200 border-none inline-flex items-center gap-2 hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
                 style={{ background: '#3498DB', border: 'none' }}
               >
@@ -168,7 +175,10 @@ function ClustersPage() {
                 <h3 className="text-xl font-semibold text-accent-800 mb-2">No Clusters Found</h3>
                 <p className="text-gray-600 mb-6">Get started by creating your first cluster</p>
                 <Button 
-                  onClick={() => setShowClusterManager(true)}
+                  onClick={() => {
+                    setEditingCluster(null);
+                    setShowClusterManager(true);
+                  }}
                   className="bg-primary-500 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 border-none hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-lg"
                   style={{ background: '#3498DB', border: 'none' }}
                 >
@@ -195,9 +205,10 @@ function ClustersPage() {
 
       <ClusterManager
         show={showClusterManager}
-        onHide={() => setShowClusterManager(false)}
+        onHide={handleCloseClusterManager}
         machines={machines}
         onClusterCreated={fetchClusters}
+        editingCluster={editingCluster}
       />
       </div>
     </div>

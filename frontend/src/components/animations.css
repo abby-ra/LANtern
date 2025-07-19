@@ -126,6 +126,67 @@
            hover:bg-blue-50 focus:bg-blue-50;
   }
 
+  /* Cluster Action Dropdown Enhancements */
+  .cluster-action-dropdown .dropdown-menu {
+    min-width: 180px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    padding: 4px 0 !important;
+  }
+
+  .cluster-dropdown-item {
+    transition: all 0.2s ease !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .cluster-dropdown-item:hover {
+    background-color: #f8fafc !important;
+    color: inherit !important;
+  }
+
+  .cluster-dropdown-item:focus {
+    background-color: #f1f5f9 !important;
+    color: inherit !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .cluster-dropdown-icon {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-family: "Font Awesome 5 Free", "FontAwesome" !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    font-style: normal !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+  }
+
+  .cluster-dropdown-item:hover .cluster-dropdown-icon {
+    transform: scale(1.1) !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  /* Force FontAwesome icons to be visible in all states */
+  .dropdown-menu .fas,
+  .dropdown-item .fas,
+  .cluster-dropdown-item .fas {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-family: "Font Awesome 5 Free", "FontAwesome" !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    font-style: normal !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+  }
+
   /* Alert Components */
   .alert-custom {
     @apply border-none rounded-lg px-5 py-4 mb-4;
@@ -363,10 +424,147 @@
 }
 
 /* PC Icon Enhancement */
-.fa-desktop {
-  color: #3498DB;
+.fas.fa-desktop {
+    color: #3498DB !important;
 }
 
-.table-row:hover .fa-desktop {
+/* FontAwesome Icon Fix for Dropdowns */
+.dropdown-item .fas {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+/* Ensure all FontAwesome icons are properly displayed */
+.fas, .far, .fab, .fa {
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    display: inline-block !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto !important;
+    line-height: 1 !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Specific dropdown icon fixes */
+.cluster-dropdown-item .fa-play::before { content: "\f04b" !important; }
+.cluster-dropdown-item .fa-redo::before { content: "\f01e" !important; }
+.cluster-dropdown-item .fa-power-off::before { content: "\f011" !important; }
+.cluster-dropdown-item .fa-edit::before { content: "\f044" !important; }
+.cluster-dropdown-item .fa-trash::before { content: "\f1f8" !important; }
+
+/* Remote Access Modal Enhancements */
+.remote-access-modal .modal-content {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.remote-access-modal .modal-header {
+  background: linear-gradient(135deg, #3498DB, #2980B9);
+  color: white;
+  border-radius: 15px 15px 0 0;
+  border: none;
+}
+
+.remote-access-modal .modal-header .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+.remote-access-modal .modal-body {
+  padding: 2rem;
+}
+
+.remote-access-modal .connection-info-card {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border: none;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.remote-access-modal .connection-method-card {
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid rgba(52, 152, 219, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.remote-access-modal .connection-method-card h6 {
+  color: #3498DB;
+  font-weight: 600;
+}
+
+.remote-access-modal .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+}
+
+.remote-access-modal .btn-primary {
+  background: linear-gradient(135deg, #3498DB, #2980B9);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.remote-access-modal .btn-primary:hover {
+  background: linear-gradient(135deg, #2980B9, #21618C);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.remote-access-modal .form-select {
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.remote-access-modal .form-select:focus {
+  border-color: #3498DB;
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Machine info badges */
+.machine-info-badge {
+  display: inline-block;
+  background: rgba(52, 152, 219, 0.1);
+  color: #3498DB;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0.25rem 0.25rem 0.25rem 0;
+}
+
+/* Status indicators for remote access */
+.connection-status-online {
+  color: #27AE60;
+  animation: pulse-online 2s infinite;
+}
+
+.connection-status-offline {
+  color: #E74C3C;
+  animation: pulse-offline 2s infinite;
+}
+
+@keyframes pulse-online {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-offline {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}.table-row:hover .fa-desktop {
   color: #2980B9;
 }

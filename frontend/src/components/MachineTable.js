@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Table, Button, Alert, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
 import axios from 'axios';
+import RemoteAccessModal from './RemoteAccessModal';
 import './animations.css';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -9,6 +10,8 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [machineStatuses, setMachineStatuses] = useState({});
   const [pingInProgress, setPingInProgress] = useState({});
+  const [showRemoteModal, setShowRemoteModal] = useState(false);
+  const [selectedMachineForRemote, setSelectedMachineForRemote] = useState(null);
 
   // Ping verification function
   const verifyMachineStatus = async (machine) => {
@@ -47,6 +50,12 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
     } finally {
       setPingInProgress(prev => ({ ...prev, [machine.id]: false }));
     }
+  };
+
+  // Remote access handler
+  const handleRemoteAccess = (machine) => {
+    setSelectedMachineForRemote(machine);
+    setShowRemoteModal(true);
   };
 
   // Removed auto-ping functionality - only ping when refresh button is clicked
@@ -273,6 +282,13 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item 
+                    onClick={() => handleRemoteAccess(machine)}
+                    className="text-primary"
+                  >
+                    <i className="fas fa-monitor me-2"></i>Remote
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item 
                     onClick={() => onEdit(machine)}
                     className="text-info"
                   >
@@ -298,6 +314,16 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
           <p className="text-muted">Click "Add Machine" to get started</p>
         </div>
       )}
+
+      {/* Remote Access Modal */}
+      <RemoteAccessModal
+        show={showRemoteModal}
+        onHide={() => {
+          setShowRemoteModal(false);
+          setSelectedMachineForRemote(null);
+        }}
+        machine={selectedMachineForRemote}
+      />
     </div>
   );
 }
