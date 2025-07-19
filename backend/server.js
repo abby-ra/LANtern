@@ -683,6 +683,123 @@ app.patch('/api/machines/:id/status', async (req, res) => {
     }
 });
 
+// MeshCentral Integration Endpoints
+app.post('/api/meshcentral/connect', async (req, res) => {
+    try {
+        const { serverUrl, username, password, domain = 'default' } = req.body;
+        
+        console.log(`Attempting MeshCentral connection to: ${serverUrl}`);
+        
+        // In a real implementation, you would make actual HTTP requests to MeshCentral API
+        // For now, we'll simulate the connection
+        
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock response - in real implementation, authenticate with MeshCentral server
+        const mockResponse = {
+            success: true,
+            sessionId: 'mock_session_' + Date.now(),
+            userRights: ['desktop', 'terminal', 'files'],
+            serverVersion: '1.1.24'
+        };
+        
+        console.log('MeshCentral connection successful');
+        res.json(mockResponse);
+        
+    } catch (err) {
+        console.error('MeshCentral connection failed:', err);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to connect to MeshCentral server',
+            details: err.message 
+        });
+    }
+});
+
+app.post('/api/meshcentral/nodes', async (req, res) => {
+    try {
+        const { serverUrl, sessionId, machineId } = req.body;
+        
+        // Get machine details from database
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        
+        // In a real implementation, fetch nodes from MeshCentral API
+        // For now, create a mock node based on the machine
+        const mockNodes = [
+            {
+                id: `mesh_node_${machine.id}`,
+                name: machine.name,
+                ip: machine.ip_address,
+                mac: machine.mac_address,
+                status: machine.is_active ? 'online' : 'offline',
+                platform: 'Windows', // Could be determined from machine data
+                lastSeen: new Date().toISOString(),
+                meshId: 'default_mesh',
+                nodeType: 'desktop',
+                capabilities: ['desktop', 'terminal', 'files']
+            }
+        ];
+        
+        console.log(`Found ${mockNodes.length} MeshCentral nodes for machine ${machine.name}`);
+        res.json({ nodes: mockNodes });
+        
+    } catch (err) {
+        console.error('Failed to fetch MeshCentral nodes:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch mesh nodes',
+            details: err.message 
+        });
+    }
+});
+
+app.post('/api/meshcentral/remote-session', async (req, res) => {
+    try {
+        const { nodeId, sessionType, machineId } = req.body;
+        
+        // Get machine details
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        
+        // Log the remote access attempt
+        console.log(`Starting ${sessionType} session for machine ${machine.name} (${machine.ip_address})`);
+        
+        // In a real implementation, you would:
+        // 1. Generate a secure session token
+        // 2. Create a session in MeshCentral
+        // 3. Return the session URL
+        
+        const sessionUrl = `https://meshcentral.example.com/${sessionType}.htm?node=${nodeId}&auth=token123`;
+        
+        res.json({
+            success: true,
+            sessionUrl: sessionUrl,
+            sessionType: sessionType,
+            nodeId: nodeId,
+            machineName: machine.name,
+            machineIp: machine.ip_address
+        });
+        
+    } catch (err) {
+        console.error('Failed to create remote session:', err);
+        res.status(500).json({ 
+            error: 'Failed to create remote session',
+            details: err.message 
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

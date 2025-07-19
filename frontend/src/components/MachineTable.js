@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Table, Button, Alert, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
+import { Table, Button, Badge, Dropdown, DropdownButton, Spinner } from 'react-bootstrap';
 import axios from 'axios';
+import MeshCentralModal from './MeshCentralModal';
 import './animations.css';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -9,6 +10,8 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [machineStatuses, setMachineStatuses] = useState({});
   const [pingInProgress, setPingInProgress] = useState({});
+  const [showMeshModal, setShowMeshModal] = useState(false);
+  const [selectedMachineForMesh, setSelectedMachineForMesh] = useState(null);
 
   // Ping verification function
   const verifyMachineStatus = async (machine) => {
@@ -47,6 +50,12 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
     } finally {
       setPingInProgress(prev => ({ ...prev, [machine.id]: false }));
     }
+  };
+
+  // MeshCentral remote access handler
+  const handleMeshCentralAccess = (machine) => {
+    setSelectedMachineForMesh(machine);
+    setShowMeshModal(true);
   };
 
   // Removed auto-ping functionality - only ping when refresh button is clicked
@@ -273,6 +282,13 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item 
+                    onClick={() => handleMeshCentralAccess(machine)}
+                    className="text-primary"
+                  >
+                    <i className="fas fa-monitor me-2"></i>Remote
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item 
                     onClick={() => onEdit(machine)}
                     className="text-info"
                   >
@@ -298,6 +314,16 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
           <p className="text-muted">Click "Add Machine" to get started</p>
         </div>
       )}
+
+      {/* MeshCentral Remote Access Modal */}
+      <MeshCentralModal
+        show={showMeshModal}
+        onHide={() => {
+          setShowMeshModal(false);
+          setSelectedMachineForMesh(null);
+        }}
+        machine={selectedMachineForMesh}
+      />
     </div>
   );
 }
