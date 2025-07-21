@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LANtern Web Remote Desktop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .connection-info {
+            margin-top: 5px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .connection-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .connection-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+        
+        .connection-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .connection-subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .connection-details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .detail-row:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .detail-value {
+            color: #007bff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .instructions {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .instructions-title {
+            font-weight: 600;
+            color: #0056b3;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .instructions-title::before {
+            content: "💡";
+            margin-right: 8px;
+        }
+        
+        .instructions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #007bff;
+            color: #007bff;
+        }
+        
+        .btn-outline:hover {
+            background: #007bff;
+            color: white;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-info {
+            background: #cce7ff;
+            color: #004085;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🖥️ LANtern Remote Desktop</h1>
+        <div class="connection-info">
+            Preparing secure remote connection...
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="connection-card">
+            <div class="connection-icon">🔗</div>
+            <h2 class="connection-title">Remote Desktop Connection Ready</h2>
+            <p class="connection-subtitle">
+                Your secure remote desktop connection is ready to launch. 
+                Choose your preferred connection method below.
+            </p>
+            
+            <div class="connection-details">
+                <div class="detail-row">
+                    <span class="detail-label">Machine:</span>
+                    <span class="detail-value" id="machine-name">Loading...</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">IP Address:</span>
+                    <span class="detail-value" id="machine-ip">Loading...</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Username:</span>
+                    <span class="detail-value" id="machine-user">Loading...</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Connection Mode:</span>
+                    <span class="detail-value" id="connection-mode">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <div class="instructions-title">Connection Instructions</div>
+                <ul>
+                    <li>Click "Launch Connection" for automatic RDP launch with pre-configured settings</li>
+                    <li>Use "Download RDP File" if you prefer to save the connection file manually</li>
+                    <li>Shadow mode provides view-only access; Control mode allows full interaction</li>
+                    <li>The connection uses your stored credentials for automatic login</li>
+                </ul>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="launchRdpConnection()">
+                    🚀 Launch Connection
+                </button>
+                <button class="btn btn-outline" onclick="downloadRdpFile()">
+                    📁 Download RDP File
+                </button>
+                <button class="btn btn-secondary" onclick="closeWindow()">
+                    ❌ Close
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const connectionConfig = {
+            host: urlParams.get('host') || 'Unknown',
+            username: urlParams.get('username') || 'Unknown',
+            machine: urlParams.get('machine') || 'Unknown Machine',
+            mode: urlParams.get('mode') || 'control',
+            session: urlParams.get('session') || 'none'
+        };
+        
+        // Get machine ID from URL for backend API calls
+        const machineId = urlParams.get('machineId') || urlParams.get('id');
+        
+        // Update connection details
+        document.getElementById('machine-name').textContent = connectionConfig.machine;
+        document.getElementById('machine-ip').textContent = connectionConfig.host;
+        document.getElementById('machine-user').textContent = connectionConfig.username;
+        document.getElementById('connection-mode').textContent = connectionConfig.mode.toUpperCase() + 
+            (connectionConfig.mode === 'shadow' ? ' (View-only)' : ' (Full control)');
+        
+        // Update page title
+        document.title = `LANtern RDP - ${connectionConfig.machine}`;
+        
+        async function launchRdpConnection() {
+            try {
+                updateStatus('info', '🔄 Preparing enhanced RDP connection...');
+                
+                // Call backend API to get RDP connection
+                const response = await fetch('http://localhost:3001/api/remote-access/enhanced-rdp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        machineId: machineId || 1, // Default to machine 1 if not provided
+                        mode: connectionConfig.mode,
+                        autoLogin: true
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.connection.rdpFile) {
+                        updateStatus('success', '✅ RDP connection prepared successfully!');
+                        
+                        // Create and download RDP file
+                        const blob = new Blob([data.connection.rdpFile.content], { type: 'application/rdp' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = data.connection.rdpFile.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        // Try direct RDP protocol launch
+                        setTimeout(() => {
+                            try {
+                                if (navigator.platform.toLowerCase().includes('win')) {
+                                    const rdpUrl = `ms-rd:${connectionConfig.host}:3389`;
+                                    window.location.href = rdpUrl;
+                                }
+                            } catch (e) {
+                                console.log('Direct RDP protocol launch not available');
+                            }
+                        }, 1000);
+                        
+                        updateStatus('success', '🚀 RDP connection launched! Check your Downloads folder if it doesn\'t open automatically.');
+                    } else {
+                        throw new Error(data.error || 'Failed to generate RDP connection');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Backend API error');
+                }
+            } catch (error) {
+                console.error('Connection failed:', error);
+                updateStatus('error', `❌ Connection failed: ${error.message}`);
+            }
+        }
+        
+        async function downloadRdpFile() {
+            try {
+                updateStatus('info', '📁 Generating RDP file...');
+                
+                // Call backend API for enhanced RDP file
+                const response = await fetch('http://localhost:3001/api/remote-access/enhanced-rdp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        machineId: machineId || 1,
+                        mode: connectionConfig.mode,
+                        autoLogin: true
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.connection.rdpFile) {
+                        const blob = new Blob([data.connection.rdpFile.content], { type: 'application/rdp' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = data.connection.rdpFile.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        updateStatus('success', '📁 Enhanced RDP file downloaded successfully!');
+                    } else {
+                        throw new Error(data.error || 'Failed to generate RDP file');
+                    }
+                } else {
+                    throw new Error('Backend API error');
+                }
+            } catch (error) {
+                console.error('Download failed:', error);
+                updateStatus('error', `❌ Download failed: ${error.message}`);
+            }
+        }
+        
+        function updateStatus(type, message) {
+            const statusElement = document.querySelector('.connection-info');
+            const statusClass = type === 'success' ? 'status-success' : 
+                              type === 'error' ? 'status-error' : 'status-info';
+            
+            // Add status message after connection details
+            let existingStatus = document.getElementById('status-display');
+            if (!existingStatus) {
+                existingStatus = document.createElement('div');
+                existingStatus.id = 'status-display';
+                existingStatus.style.cssText = `
+                    margin-top: 15px; 
+                    padding: 10px; 
+                    border-radius: 6px; 
+                    font-size: 0.9rem;
+                    ${type === 'success' ? 'background: #d4edda; color: #155724; border: 1px solid #c3e6cb;' :
+                      type === 'error' ? 'background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' :
+                      'background: #cce7ff; color: #004085; border: 1px solid #99d3ff;'}
+                `;
+                statusElement.appendChild(existingStatus);
+            }
+            
+            existingStatus.innerHTML = message;
+            existingStatus.className = statusClass;
+        }
+        
+        function closeWindow() {
+            if (window.opener) {
+                window.close();
+            } else {
+                if (history.length > 1) {
+                    history.back();
+                } else {
+                    alert('✅ You can now close this tab/window.');
+                }
+            }
+        }
+        
+        // Handle messages from parent window
+        window.addEventListener('message', function(event) {
+            console.log('Received message:', event.data);
+            
+            if (event.data.type === 'disconnect') {
+                closeWindow();
+            } else if (event.data.type === 'updateMachine') {
+                // Update machine info if provided by parent
+                const machine = event.data.machine;
+                if (machine) {
+                    document.getElementById('machine-name').textContent = machine.name;
+                    document.getElementById('machine-ip').textContent = machine.ip_address;
+                    document.getElementById('machine-user').textContent = machine.username;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

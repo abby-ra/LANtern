@@ -285,7 +285,7 @@ function MachineTable({ machines, onAction, onEdit, onDelete }) {
                     onClick={() => handleVisualRemoteAccess(machine)}
                     className="text-primary"
                   >
-                    <i className="fas fa-monitor me-2"></i>Remote
+                    <i className="fas fa-desktop me-2"></i>Remote
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item 
