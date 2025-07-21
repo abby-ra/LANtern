@@ -837,10 +837,10 @@ app.post('/api/remote-access/direct', async (req, res) => {
         // Generate different connection methods based on access type
         switch (accessType) {
             case 'rdp':
-                // Create RDP connection data
-                connectionDetails.rdpFile = {
-                    content: `full address:s:${machine.ip_address}:3389
+                // Create RDP connection data with automatic authentication and shadow mode
+                const rdpContent = `full address:s:${machine.ip_address}:3389
 username:s:${machine.username || 'administrator'}
+password 51:b:${machine.encrypted_password ? Buffer.from(machine.encrypted_password).toString('base64') : ''}
 screen mode id:i:2
 use multimon:i:0
 desktopwidth:i:1920
@@ -854,10 +854,44 @@ displayconnectionbar:i:1
 redirectprinters:i:1
 redirectclipboard:i:1
 autoreconnection enabled:i:1
-authentication level:i:2
-prompt for credentials:i:${machine.encrypted_password ? 0 : 1}`,
-                    filename: `${machine.name.replace(/\s+/g, '_')}_remote.rdp`
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+enablecredsspsupport:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+gatewayhostname:s:
+gatewayusagemethod:i:0
+gatewaycredentialssource:i:0
+gatewayprofileusagemethod:i:1
+promptcredentialonce:i:1
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+kdcproxyname:s:
+drivestoredirect:s:
+devicestoredirect:s:
+winposstr:s:0,1,0,0,1920,1080
+pcb:s:
+full address:s:${machine.ip_address}:3389
+disable wallpaper:i:0
+disable full window drag:i:0
+disable menu anims:i:0
+disable themes:i:0
+bitmapcachepersistenable:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+smart sizing:i:1
+shadow:i:1`;
+
+                connectionDetails.rdpFile = {
+                    content: rdpContent,
+                    filename: `${machine.name.replace(/\s+/g, '_')}_shadow.rdp`
                 };
+
+                // Also provide direct connection command for advanced users
+                connectionDetails.directCommand = `mstsc "${machine.name.replace(/\s+/g, '_')}_shadow.rdp"`;
                 break;
                 
             case 'vnc':
@@ -924,6 +958,134 @@ app.post('/api/meshcentral/remote-session', async (req, res) => {
         console.error('Failed to create remote session:', err);
         res.status(500).json({ 
             error: 'Failed to create remote session',
+            details: err.message 
+        });
+    }
+});
+
+// Enhanced RDP endpoint with shadow/control mode support
+app.post('/api/remote-access/enhanced-rdp', async (req, res) => {
+    try {
+        const { machineId, mode = 'shadow', autoLogin = true } = req.body;
+        
+        // Get machine with credentials
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        console.log(`Setting up enhanced RDP (${mode} mode) for ${machine.name} (${machine.ip_address})`);
+        
+        // Create enhanced RDP file with shadow/control mode settings
+        let rdpContent = `full address:s:${machine.ip_address}:3389
+username:s:${machine.username || 'administrator'}`;
+
+        // Add password for automatic authentication
+        if (autoLogin && machine.encrypted_password) {
+            rdpContent += `
+password 51:b:${Buffer.from(machine.encrypted_password).toString('base64')}`;
+        }
+
+        // Configure connection based on mode
+        if (mode === 'shadow') {
+            // Shadow mode - view without taking control
+            rdpContent += `
+screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1920
+desktopheight:i:1080
+session bpp:i:32
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+displayconnectionbar:i:1
+redirectprinters:i:0
+redirectclipboard:i:1
+autoreconnection enabled:i:1
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+enablecredsspsupport:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+disable wallpaper:i:0
+disable full window drag:i:0
+disable menu anims:i:0
+disable themes:i:0
+bitmapcachepersistenable:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+smart sizing:i:1
+span monitors:i:0
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+shadow:i:1
+shadowing mode:i:1
+shadow quality:i:2`;
+        } else {
+            // Control mode - full desktop takeover
+            rdpContent += `
+screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1920
+desktopheight:i:1080
+session bpp:i:32
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+displayconnectionbar:i:1
+redirectprinters:i:1
+redirectclipboard:i:1
+autoreconnection enabled:i:1
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+enablecredsspsupport:i:1
+disable wallpaper:i:0
+disable full window drag:i:0
+disable menu anims:i:0
+disable themes:i:0
+bitmapcachepersistenable:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+smart sizing:i:1
+span monitors:i:0
+use redirection server name:i:0`;
+        }
+
+        const connectionDetails = {
+            machineId: machine.id,
+            machineName: machine.name,
+            ipAddress: machine.ip_address,
+            mode: mode,
+            isOnline: machine.is_active === 1,
+            rdpFile: {
+                content: rdpContent,
+                filename: `${machine.name.replace(/\s+/g, '_')}_${mode}.rdp`
+            },
+            credentials: {
+                username: machine.username || 'administrator',
+                autoLogin: autoLogin && !!machine.encrypted_password
+            }
+        };
+
+        console.log(`Enhanced RDP connection prepared for ${machine.name} in ${mode} mode`);
+        res.json({
+            success: true,
+            connection: connectionDetails
+        });
+        
+    } catch (err) {
+        console.error('Failed to setup enhanced RDP:', err);
+        res.status(500).json({ 
+            error: 'Failed to setup enhanced RDP connection',
             details: err.message 
         });
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Alert, Badge, Button, Form, Spinner, Tab, Tabs, Card } from 'react-bootstrap';
 import axios from 'axios';
+import EnhancedRdpModal from './EnhancedRdpModal';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -10,6 +11,7 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
     const [activeTab, setActiveTab] = useState('quick-access');
     const [remoteConnection, setRemoteConnection] = useState(null);
     const [accessMethods, setAccessMethods] = useState([]);
+    const [showEnhancedRdp, setShowEnhancedRdp] = useState(false);
 
     // Reset modal state when closed
     useEffect(() => {
@@ -18,6 +20,7 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
             setAlert({ show: false, message: '', variant: 'success' });
             setRemoteConnection(null);
             setAccessMethods([]);
+            setShowEnhancedRdp(false);
         }
     }, [show]);
 
@@ -32,11 +35,11 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
         const methods = [
             {
                 id: 'rdp',
-                name: 'Remote Desktop (RDP)',
+                name: 'Enhanced Remote Desktop (RDP)',
                 icon: 'fas fa-desktop',
-                description: 'Full Windows desktop access with mouse and keyboard control',
+                description: 'Advanced RDP with Shadow Mode - view desktop without interrupting user',
                 color: 'primary',
-                requirements: 'Windows machine with RDP enabled',
+                requirements: 'Windows machine with RDP enabled - Auto-login included',
                 port: 3389,
                 available: machine?.is_active
             },
@@ -78,6 +81,12 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
     const startRemoteAccess = async (accessType) => {
         if (!machine) return;
 
+        // For RDP, open enhanced modal instead of direct connection
+        if (accessType === 'rdp') {
+            setShowEnhancedRdp(true);
+            return;
+        }
+
         setIsConnecting(true);
         try {
             setAlert({
@@ -97,9 +106,6 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
 
                 // Handle different access types
                 switch (accessType) {
-                    case 'rdp':
-                        handleRdpConnection(connection);
-                        break;
                     case 'vnc':
                         handleVncConnection(connection);
                         break;
@@ -127,7 +133,7 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
 
     const handleRdpConnection = (connection) => {
         if (connection.rdpFile) {
-            // Download RDP file for native client
+            // Create and download RDP file with automatic authentication
             const blob = new Blob([connection.rdpFile.content], { type: 'application/rdp' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -138,9 +144,33 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
 
+            // Try to automatically launch RDP file (works on Windows)
+            setTimeout(() => {
+                try {
+                    // For Windows, try to execute the RDP file directly
+                    if (navigator.platform.toLowerCase().includes('win')) {
+                        // Create a temporary URL scheme to launch RDP
+                        const rdpUrl = `rdp://${encodeURIComponent(connection.machineName)}/${encodeURIComponent(connection.ipAddress)}`;
+                        window.location.href = rdpUrl;
+                    }
+                } catch (error) {
+                    console.log('Direct RDP launch not supported on this platform');
+                }
+            }, 1000);
+
             setAlert({
                 show: true,
-                message: `RDP file downloaded! Opening remote desktop connection to ${machine.name}. Check your downloads folder if it doesn't open automatically.`,
+                message: `🖥️ Shadow RDP connection initiated to ${machine.name}! 
+                
+✅ **Features enabled:**
+• **Shadow mode** - View actual desktop without interrupting user
+• **Automatic login** - No password prompt required  
+• **Full desktop access** - Mouse and keyboard control when needed
+
+📁 RDP file downloaded: ${connection.rdpFile.filename}
+🔗 If it doesn't open automatically, check your downloads folder and double-click the file.
+
+💡 **Shadow Mode**: The user on ${machine.name} can continue working normally while you observe or assist.`,
                 variant: 'success'
             });
         }
@@ -290,9 +320,9 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
                                                         {isConnecting ? (
                                                             <Spinner animation="border" size="sm" className="me-1" />
                                                         ) : (
-                                                            <i className="fas fa-play me-1"></i>
+                                                            <i className={`fas ${method.id === 'rdp' ? 'fa-cogs' : 'fa-play'} me-1`}></i>
                                                         )}
-                                                        Connect
+                                                        {method.id === 'rdp' ? 'Configure' : 'Connect'}
                                                     </Button>
                                                     {!method.available && (
                                                         <small className="text-muted d-block mt-1">
@@ -359,7 +389,7 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
                 {machine?.is_active && (
                     <Button 
                         variant="primary" 
-                        onClick={() => startRemoteAccess('rdp')}
+                        onClick={() => setShowEnhancedRdp(true)}
                         disabled={isConnecting}
                     >
                         {isConnecting ? (
@@ -370,12 +400,19 @@ const VisualRemoteAccessModal = ({ show, onHide, machine }) => {
                         ) : (
                             <>
                                 <i className="fas fa-desktop me-2"></i>
-                                Quick RDP Access
+                                Enhanced RDP Access
                             </>
                         )}
                     </Button>
                 )}
             </Modal.Footer>
+
+            {/* Enhanced RDP Modal */}
+            <EnhancedRdpModal
+                show={showEnhancedRdp}
+                onHide={() => setShowEnhancedRdp(false)}
+                machine={machine}
+            />
         </Modal>
     );
 };

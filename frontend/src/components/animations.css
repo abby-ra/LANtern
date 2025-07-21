@@ -743,3 +743,43 @@
   50% { opacity: 0.5; }
   100% { opacity: 1; }
 }
+
+/* Enhanced RDP Modal Styles */
+.enhanced-rdp-modal .modal-dialog {
+  max-width: 900px;
+}
+
+.enhanced-rdp-modal .connection-modes .card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.enhanced-rdp-modal .connection-modes .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.enhanced-rdp-modal .connection-modes .card.border-primary {
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.enhanced-rdp-modal .connection-modes .card.border-warning {
+  border-color: #ffc107 !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.enhanced-rdp-modal .connection-info {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
