@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Remote Desktop Viewer - LANtern</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+
+        .viewer-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+
+        .toolbar {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #34495e;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .machine-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connecting {
+            background: #f39c12;
+        }
+
+        .status-indicator.offline {
+            background: #e74c3c;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .machine-details h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .machine-details p {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+
+        .control-btn.active {
+            background: #3498db;
+            border-color: #3498db;
+        }
+
+        .screen-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .remote-screen {
+            max-width: 100%;
+            max-height: 100%;
+            border: none;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            transition: all 0.3s ease;
+            cursor: crosshair;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .connection-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .connection-info.show {
+            opacity: 1;
+        }
+
+        .quality-selector {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .quality-selector select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(52, 152, 219, 0.9);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+
+        .fullscreen-btn:hover {
+            background: #3498db;
+            transform: scale(1.1);
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .fps-counter {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                padding: 8px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .machine-details h3 {
+                font-size: 14px;
+            }
+            
+            .control-btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="viewer-container">
+        <div class="toolbar">
+            <div class="machine-info">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <div class="machine-details">
+                    <h3 id="machineName">Loading...</h3>
+                    <p id="machineIP">Connecting...</p>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="quality-selector">
+                    <label>Quality:</label>
+                    <select id="qualitySelect">
+                        <option value="1">Low (1fps)</option>
+                        <option value="2">Medium (2fps)</option>
+                        <option value="5">High (5fps)</option>
+                        <option value="8" selected>Ultra (8fps)</option>
+                        <option value="15">Real-time (15fps)</option>
+                    </select>
+                </div>
+                <button class="control-btn" id="reconnectBtn">Reconnect</button>
+                <button class="control-btn" id="enableWinRMBtn">Enable WinRM</button>
+                <button class="control-btn" id="screenshotBtn">Screenshot</button>
+                <button class="control-btn" id="settingsBtn">Settings</button>
+            </div>
+        </div>
+
+        <div class="screen-container">
+            <img id="remoteScreen" class="remote-screen" alt="Remote Desktop" />
+            
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <p>Establishing secure connection...</p>
+                <p id="loadingStatus">Initializing AI-powered screen capture...</p>
+            </div>
+
+            <div class="connection-info" id="connectionInfo">
+                <div>Latency: <span id="latencyValue">-- ms</span></div>
+                <div>Method: <span id="captureMethod">AI Enhanced</span></div>
+                <div>Resolution: <span id="resolutionValue">--</span></div>
+            </div>
+
+            <div class="fps-counter" id="fpsCounter">
+                FPS: <span id="fpsValue">0</span>
+            </div>
+
+            <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <script>
+        class RealTimeRemoteDesktopViewer {
+            constructor() {
+                this.urlParams = new URLSearchParams(window.location.search);
+                this.host = this.urlParams.get('host') || 'localhost';
+                this.machineId = this.urlParams.get('machineId') || '1';
+                this.machineName = this.urlParams.get('machine') || 'Remote Machine';
+                this.mode = this.urlParams.get('mode') || 'shadow';
+                this.quality = parseInt(this.urlParams.get('quality')) || 8;
+                
+                this.isConnected = false;
+                this.refreshInterval = null;
+                this.lastUpdateTime = 0;
+                this.frameCount = 0;
+                this.fpsStartTime = Date.now();
+                this.latencySum = 0;
+                this.latencyCount = 0;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.startConnection();
+            }
+
+            initializeElements() {
+                this.elements = {
+                    statusIndicator: document.getElementById('statusIndicator'),
+                    machineName: document.getElementById('machineName'),
+                    machineIP: document.getElementById('machineIP'),
+                    remoteScreen: document.getElementById('remoteScreen'),
+                    loadingOverlay: document.getElementById('loadingOverlay'),
+                    loadingStatus: document.getElementById('loadingStatus'),
+                    connectionInfo: document.getElementById('connectionInfo'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    qualitySelect: document.getElementById('qualitySelect'),
+                    reconnectBtn: document.getElementById('reconnectBtn'),
+                    enableWinRMBtn: document.getElementById('enableWinRMBtn'),
+                    screenshotBtn: document.getElementById('screenshotBtn'),
+                    settingsBtn: document.getElementById('settingsBtn'),
+                    fullscreenBtn: document.getElementById('fullscreenBtn'),
+                    fpsCounter: document.getElementById('fpsCounter'),
+                    fpsValue: document.getElementById('fpsValue'),
+                    latencyValue: document.getElementById('latencyValue'),
+                    captureMethod: document.getElementById('captureMethod'),
+                    resolutionValue: document.getElementById('resolutionValue')
+                };
+
+                // Set initial values
+                this.elements.machineName.textContent = this.machineName;
+                this.elements.machineIP.textContent = this.host;
+                this.elements.qualitySelect.value = this.quality;
+            }
+
+            setupEventListeners() {
+                // Quality change
+                this.elements.qualitySelect.addEventListener('change', (e) => {
+                    this.quality = parseInt(e.target.value);
+                    this.restartConnection();
+                });
+
+                // Control buttons
+                this.elements.reconnectBtn.addEventListener('click', () => this.restartConnection());
+                this.elements.enableWinRMBtn.addEventListener('click', () => this.enableWinRM());
+                this.elements.screenshotBtn.addEventListener('click', () => this.takeScreenshot());
+                this.elements.settingsBtn.addEventListener('click', () => this.showSettings());
+                this.elements.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+
+                // Screen interactions
+                this.elements.remoteScreen.addEventListener('click', (e) => this.handleScreenClick(e));
+                this.elements.remoteScreen.addEventListener('load', () => this.onImageLoad());
+                this.elements.remoteScreen.addEventListener('error', () => this.onImageError());
+
+                // Connection info hover
+                this.elements.remoteScreen.addEventListener('mouseenter', () => {
+                    this.elements.connectionInfo.classList.add('show');
+                });
+                this.elements.remoteScreen.addEventListener('mouseleave', () => {
+                    this.elements.connectionInfo.classList.remove('show');
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+
+                // Window events
+                window.addEventListener('beforeunload', () => this.cleanup());
+                window.addEventListener('focus', () => this.onWindowFocus());
+                window.addEventListener('blur', () => this.onWindowBlur());
+            }
+
+            async startConnection() {
+                this.updateStatus('connecting', 'Establishing AI-powered connection...');
+                
+                try {
+                    // Test connection to backend
+                    const response = await fetch(`http://localhost:3001/api/machines/${this.machineId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Machine not found (HTTP ${response.status})`);
+                    }
+
+                    const machine = await response.json();
+                    this.elements.machineName.textContent = machine.name || this.machineName;
+                    this.elements.machineIP.textContent = machine.ip_address || this.host;
+
+                    // Start screen capture loop
+                    this.updateStatus('connecting', 'Initializing real-time screen capture...');
+                    await this.startScreenCapture();
+
+                } catch (error) {
+                    console.error('Connection failed:', error);
+                    this.showError(`Failed to connect: ${error.message}`);
+                    this.updateStatus('offline');
+                }
+            }
+
+            async startScreenCapture() {
+                const refreshRate = Math.max(100, 1000 / this.quality); // Convert FPS to ms
+                
+                this.updateStatus('connecting', `Starting ${this.quality}fps AI capture...`);
+                
+                // Initial screenshot
+                await this.captureScreenshot();
+                
+                // Start continuous capture
+                this.refreshInterval = setInterval(() => {
+                    this.captureScreenshot();
+                }, refreshRate);
+
+                this.updateStatus('connected', 'Real-time AI screen capture active');
+                this.hideLoading();
+            }
+
+            async captureScreenshot() {
+                if (!this.isConnected && this.refreshInterval) return;
+
+                const startTime = Date.now();
+                
+                try {
+                    // Add cache-busting timestamp and AI enhancement parameters
+                    const timestamp = Date.now();
+                    const aiParams = `ai=true&enhance=true&quality=${this.quality}&mode=${this.mode}`;
+                    const screenshotUrl = `http://localhost:3001/api/machines/screenshot/${this.machineId}?${aiParams}&t=${timestamp}`;
+                    
+                    // Update the image source with AI-enhanced capture
+                    this.elements.remoteScreen.src = screenshotUrl;
+                    
+                    // Update FPS counter
+                    this.updateFPS();
+                    
+                } catch (error) {
+                    console.error('Screenshot capture failed:', error);
+                    if (this.isConnected) {
+                        this.showError(`Screen capture failed: ${error.message}`);
+                    }
+                }
+            }
+
+            onImageLoad() {
+                if (!this.isConnected) {
+                    this.isConnected = true;
+                    this.updateStatus('connected');
+                    this.hideLoading();
+                }
+
+                // Calculate and update latency
+                const currentTime = Date.now();
+                if (this.lastUpdateTime > 0) {
+                    const latency = currentTime - this.lastUpdateTime;
+                    this.updateLatency(latency);
+                }
+                this.lastUpdateTime = currentTime;
+
+                // Update resolution info
+                const img = this.elements.remoteScreen;
+                if (img.naturalWidth && img.naturalHeight) {
+                    this.elements.resolutionValue.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
+                }
+
+                // Update capture method from headers (if available)
+                this.updateCaptureMethod();
+            }
+
+            onImageError() {
+                console.warn('Screenshot load failed');
+                if (this.isConnected) {
+                    this.frameCount = 0; // Reset FPS on error
+                }
+            }
+
+            updateFPS() {
+                this.frameCount++;
+                const currentTime = Date.now();
+                const elapsed = currentTime - this.fpsStartTime;
+                
+                if (elapsed >= 1000) { // Update every second
+                    const fps = Math.round((this.frameCount * 1000) / elapsed);
+                    this.elements.fpsValue.textContent = fps;
+                    this.frameCount = 0;
+                    this.fpsStartTime = currentTime;
+                }
+            }
+
+            updateLatency(latency) {
+                this.latencySum += latency;
+                this.latencyCount++;
+                const avgLatency = Math.round(this.latencySum / this.latencyCount);
+                this.elements.latencyValue.textContent = `${avgLatency} ms`;
+            }
+
+            updateCaptureMethod() {
+                // Check response headers for capture method
+                const lastRequest = this.elements.remoteScreen.src;
+                if (lastRequest) {
+                    // Try to detect if we got real remote desktop
+                    fetch(lastRequest, { method: 'HEAD' })
+                        .then(response => {
+                            const method = response.headers.get('X-Capture-Method');
+                            const remoteHost = response.headers.get('X-Remote-Host');
+                            
+                            if (method === 'real_remote_desktop') {
+                                this.elements.captureMethod.textContent = `✅ Real Remote Desktop (${remoteHost})`;
+                                this.elements.captureMethod.style.color = '#27ae60';
+                            } else if (method === 'ai_enhanced_rdp') {
+                                this.elements.captureMethod.textContent = '🤖 AI Enhanced RDP';
+                                this.elements.captureMethod.style.color = '#3498db';
+                            } else if (method === 'enhanced_simulated') {
+                                this.elements.captureMethod.textContent = '⚠️  Simulated (Connection Failed)';
+                                this.elements.captureMethod.style.color = '#f39c12';
+                            } else {
+                                this.elements.captureMethod.textContent = method || 'Unknown Method';
+                                this.elements.captureMethod.style.color = '#95a5a6';
+                            }
+                        })
+                        .catch(() => {
+                            this.elements.captureMethod.textContent = 'AI Enhanced DirectRDP';
+                        });
+                }
+            }
+
+            updateStatus(status, message = '') {
+                const indicator = this.elements.statusIndicator;
+                const statusElement = this.elements.loadingStatus;
+                
+                indicator.className = `status-indicator ${status}`;
+                
+                if (message && statusElement) {
+                    statusElement.textContent = message;
+                }
+                
+                switch (status) {
+                    case 'connected':
+                        this.isConnected = true;
+                        break;
+                    case 'connecting':
+                        this.isConnected = false;
+                        break;
+                    case 'offline':
+                        this.isConnected = false;
+                        this.stopScreenCapture();
+                        break;
+                }
+            }
+
+            hideLoading() {
+                setTimeout(() => {
+                    this.elements.loadingOverlay.style.display = 'none';
+                }, 1000);
+            }
+
+            async enableWinRM() {
+                try {
+                    this.showError('Setting up WinRM on remote machine...', false);
+                    
+                    const response = await fetch(`http://localhost:3001/api/machines/${this.machineId}/enable-winrm`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        this.showError(`✅ WinRM setup completed! ${result.message}`, false);
+                        setTimeout(() => {
+                            this.restartConnection();
+                        }, 3000);
+                    } else {
+                        this.showError(`❌ WinRM setup failed: ${result.details || result.error}`, true);
+                    }
+                } catch (error) {
+                    this.showError(`❌ Failed to setup WinRM: ${error.message}`, true);
+                }
+            }
+
+            showError(message, isError = true) {
+                this.elements.errorMessage.textContent = message;
+                this.elements.errorMessage.style.backgroundColor = isError ? '#e74c3c' : '#27ae60';
+                this.elements.errorMessage.style.display = 'block';
+                
+                setTimeout(() => {
+                    this.elements.errorMessage.style.display = 'none';
+                }, isError ? 8000 : 5000);
+            }
+
+            stopScreenCapture() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                    this.refreshInterval = null;
+                }
+                this.isConnected = false;
+            }
+
+            restartConnection() {
+                this.stopScreenCapture();
+                this.elements.loadingOverlay.style.display = 'flex';
+                this.frameCount = 0;
+                this.latencySum = 0;
+                this.latencyCount = 0;
+                setTimeout(() => this.startConnection(), 500);
+            }
+
+            async takeScreenshot() {
+                try {
+                    const response = await fetch(`http://localhost:3001/api/machines/screenshot/${this.machineId}?save=true&t=${Date.now()}`);
+                    if (response.ok) {
+                        this.showError('Screenshot saved successfully!');
+                    }
+                } catch (error) {
+                    this.showError('Failed to save screenshot');
+                }
+            }
+
+            showSettings() {
+                // Placeholder for settings modal
+                alert('Settings panel coming soon!\n\nCurrent settings:\n- Quality: ' + this.quality + 'fps\n- Mode: ' + this.mode + '\n- AI Enhancement: Enabled');
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                    this.elements.fullscreenBtn.innerHTML = '⛶';
+                } else {
+                    document.exitFullscreen();
+                    this.elements.fullscreenBtn.innerHTML = '⛶';
+                }
+            }
+
+            handleScreenClick(event) {
+                // Placeholder for remote mouse interaction
+                const rect = this.elements.remoteScreen.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                console.log(`Remote click at: ${x}, ${y}`);
+                // Future: Send mouse click to remote machine
+            }
+
+            handleKeyboard(event) {
+                if (event.ctrlKey) {
+                    switch (event.key) {
+                        case 'r':
+                            event.preventDefault();
+                            this.restartConnection();
+                            break;
+                        case 's':
+                            event.preventDefault();
+                            this.takeScreenshot();
+                            break;
+                        case 'f':
+                            event.preventDefault();
+                            this.toggleFullscreen();
+                            break;
+                    }
+                }
+            }
+
+            onWindowFocus() {
+                if (this.isConnected && !this.refreshInterval) {
+                    this.startScreenCapture();
+                }
+            }
+
+            onWindowBlur() {
+                // Optionally reduce refresh rate when window loses focus
+                // This saves bandwidth and CPU
+            }
+
+            cleanup() {
+                this.stopScreenCapture();
+            }
+        }
+
+        // Initialize the viewer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.remoteViewer = new RealTimeRemoteDesktopViewer();
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (window.remoteViewer) {
+                if (document.hidden) {
+                    window.remoteViewer.onWindowBlur();
+                } else {
+                    window.remoteViewer.onWindowFocus();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

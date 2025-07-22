@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import MachinesPage from './pages/MachinesPage';
 import ClustersPage from './pages/ClustersPage';
 import ScreenshotsPage from './pages/ScreenshotsPage';
+import LiveViewerPage from './pages/LiveViewerPage';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/machines" element={<MachinesPage />} />
           <Route path="/clusters" element={<ClustersPage />} />
           <Route path="/screenshots" element={<ScreenshotsPage />} />
+          <Route path="/live-viewer" element={<LiveViewerPage />} />
         </Routes>
       </div>
       <Footer />
