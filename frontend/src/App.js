@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Footer from './components/Footer';
 import MachinesPage from './pages/MachinesPage';
 import ClustersPage from './pages/ClustersPage';
+import ScreenshotsPage from './pages/ScreenshotsPage';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route path="/" element={<MachinesPage />} />
           <Route path="/machines" element={<MachinesPage />} />
           <Route path="/clusters" element={<ClustersPage />} />
+          <Route path="/screenshots" element={<ScreenshotsPage />} />
         </Routes>
       </div>
       <Footer />

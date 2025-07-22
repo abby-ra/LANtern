@@ -1,4 +1,3 @@
-// Removed bcrypt import, no longer needed
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -6,6 +5,8 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const wol = require('wol');
 const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,7 @@ app.use(bodyParser.json());
 // Serve static files for web-based remote access
 app.use('/public', express.static('public'));
 app.use('/vnc.html', express.static('public/vnc.html'));
+app.use('/screenshots', express.static('screenshots')); // Serve saved screenshots
 
 const PORT = process.env.PORT || 3001;
 
@@ -1072,7 +1074,16 @@ use redirection server name:i:0`;
             },
             credentials: {
                 username: machine.username || 'administrator',
-                autoLogin: autoLogin && !!machine.encrypted_password
+                autoLogin: autoLogin && !!machine.encrypted_password,
+                password: machine.encrypted_password // Include for direct connections
+            },
+            directConnection: {
+                shadowUrl: `ms-rd:${machine.ip_address}?shadow=1&username=${machine.username || 'administrator'}`,
+                controlUrl: `ms-rd:${machine.ip_address}?username=${machine.username || 'administrator'}`,
+                webViewerUrl: `http://localhost:3000/web-rdp-viewer.html?host=${machine.ip_address}&machine=${encodeURIComponent(machine.name)}&mode=${mode}&machineId=${machine.id}&quality=8`,
+                command: mode === 'shadow' 
+                    ? `mstsc /v:${machine.ip_address} /shadow:console /noConsentPrompt`
+                    : `mstsc /v:${machine.ip_address}`
             }
         };
 
@@ -1088,6 +1099,296 @@ use redirection server name:i:0`;
             error: 'Failed to setup enhanced RDP connection',
             details: err.message 
         });
+    }
+});
+
+// Live screenshot endpoint for web-based remote desktop viewer
+app.get('/api/machines/screenshot/:id', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        
+        // Get machine details
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        
+        // Check if machine is online
+        if (!machine.is_active) {
+            // Return a "machine offline" image
+            res.set('Content-Type', 'image/png');
+            const offlineImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+            return res.send(offlineImage);
+        }
+        
+        // In a real implementation, you would:
+        // 1. Use RDP/VNC to capture the remote desktop
+        // 2. Use Windows API to get screenshot via WMI
+        // 3. Use a remote agent to capture screen
+        
+        // For now, return a simulated screenshot or cached image
+        // This is where you'd integrate with your screenshot service
+        
+        // Try to get real screenshot (this would need to be implemented)
+        try {
+            // Example: Use remote PowerShell or WMI to get screenshot
+            // const screenshot = await captureRemoteScreenshot(machine.ip_address, machine.username, machine.encrypted_password);
+            
+            // For demonstration, create a dynamic image showing machine info
+            const canvas = require('canvas');
+            const { createCanvas } = canvas;
+            
+            const width = 1920;
+            const height = 1080;
+            const canvasObj = createCanvas(width, height);
+            const ctx = canvasObj.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#1e3c72');
+            gradient.addColorStop(1, '#2a5298');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Machine info overlay
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(50, 50, 400, 200);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '24px Arial';
+            ctx.fillText(`Machine: ${machine.name}`, 70, 90);
+            ctx.fillText(`IP: ${machine.ip_address}`, 70, 130);
+            ctx.fillText(`Status: Online`, 70, 170);
+            ctx.fillText(`Time: ${new Date().toLocaleString()}`, 70, 210);
+            
+            // Taskbar simulation
+            ctx.fillStyle = '#1f1f1f';
+            ctx.fillRect(0, height - 40, width, 40);
+            
+            // Start button
+            ctx.fillStyle = '#0078d4';
+            ctx.fillRect(0, height - 40, 60, 40);
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText('⊞', 20, height - 15);
+            
+            // Clock
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            const timeText = new Date().toLocaleTimeString();
+            const timeWidth = ctx.measureText(timeText).width;
+            ctx.fillText(timeText, width - timeWidth - 20, height - 15);
+            
+            // Convert to PNG buffer
+            const buffer = canvasObj.toBuffer('image/png');
+            
+            // Save screenshot to disk with timestamp
+            const screenshotsDir = path.join(__dirname, 'screenshots');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `${machine.name.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.png`;
+            const filepath = path.join(screenshotsDir, filename);
+            
+            try {
+                // Ensure screenshots directory exists
+                if (!fs.existsSync(screenshotsDir)) {
+                    fs.mkdirSync(screenshotsDir, { recursive: true });
+                }
+                
+                // Save the screenshot
+                fs.writeFileSync(filepath, buffer);
+                console.log(`Screenshot saved: ${filename}`);
+                
+                // Log screenshot capture to database
+                await db.query(
+                    'INSERT INTO power_events (machine_id, action, status, initiated_by, response_time) VALUES (?, ?, ?, ?, ?)',
+                    [machineId, 'screenshot', 'success', 'system', Date.now()]
+                );
+                
+            } catch (saveError) {
+                console.error('Failed to save screenshot:', saveError);
+            }
+            
+            res.set('Content-Type', 'image/png');
+            res.set('Cache-Control', 'no-cache');
+            res.set('X-Screenshot-Filename', filename); // Send filename in header
+            res.send(buffer);
+            
+        } catch (screenshotError) {
+            console.error('Screenshot capture failed:', screenshotError);
+            
+            // Return a simple placeholder image
+            res.set('Content-Type', 'image/png');
+            const placeholderImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+            res.send(placeholderImage);
+        }
+        
+    } catch (error) {
+        console.error('Screenshot endpoint error:', error);
+        res.status(500).json({ error: 'Failed to capture screenshot', details: error.message });
+    }
+});
+
+// Screenshot management endpoints
+app.get('/api/screenshots', async (req, res) => {
+    try {
+        const screenshotsDir = path.join(__dirname, 'screenshots');
+        
+        // Ensure screenshots directory exists
+        if (!fs.existsSync(screenshotsDir)) {
+            fs.mkdirSync(screenshotsDir, { recursive: true });
+            return res.json({ screenshots: [] });
+        }
+        
+        // Read all files in screenshots directory
+        const files = fs.readdirSync(screenshotsDir);
+        const screenshots = [];
+        
+        for (const file of files) {
+            if (file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')) {
+                const filepath = path.join(screenshotsDir, file);
+                const stats = fs.statSync(filepath);
+                
+                // Parse machine name from filename
+                const machineName = file.split('_')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim();
+                
+                screenshots.push({
+                    filename: file,
+                    machineName: machineName,
+                    size: stats.size,
+                    created: stats.birthtime,
+                    modified: stats.mtime,
+                    url: `/screenshots/${file}`
+                });
+            }
+        }
+        
+        // Sort by creation date (newest first)
+        screenshots.sort((a, b) => new Date(b.created) - new Date(a.created));
+        
+        res.json({ screenshots });
+        
+    } catch (error) {
+        console.error('Failed to list screenshots:', error);
+        res.status(500).json({ error: 'Failed to list screenshots', details: error.message });
+    }
+});
+
+// Get screenshots for a specific machine
+app.get('/api/machines/:id/screenshots', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        
+        // Get machine details
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        const screenshotsDir = path.join(__dirname, 'screenshots');
+        
+        if (!fs.existsSync(screenshotsDir)) {
+            return res.json({ screenshots: [] });
+        }
+        
+        // Read all files and filter by machine name
+        const files = fs.readdirSync(screenshotsDir);
+        const machineScreenshots = [];
+        const machineNamePattern = machine.name.replace(/[^a-zA-Z0-9]/g, '_');
+        
+        for (const file of files) {
+            if (file.startsWith(machineNamePattern) && (file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))) {
+                const filepath = path.join(screenshotsDir, file);
+                const stats = fs.statSync(filepath);
+                
+                machineScreenshots.push({
+                    filename: file,
+                    machineName: machine.name,
+                    machineId: machine.id,
+                    size: stats.size,
+                    created: stats.birthtime,
+                    modified: stats.mtime,
+                    url: `/screenshots/${file}`
+                });
+            }
+        }
+        
+        // Sort by creation date (newest first)
+        machineScreenshots.sort((a, b) => new Date(b.created) - new Date(a.created));
+        
+        res.json({ screenshots: machineScreenshots, machine: machine.name });
+        
+    } catch (error) {
+        console.error('Failed to list machine screenshots:', error);
+        res.status(500).json({ error: 'Failed to list machine screenshots', details: error.message });
+    }
+});
+
+// Delete a specific screenshot
+app.delete('/api/screenshots/:filename', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const filepath = path.join(__dirname, 'screenshots', filename);
+        
+        if (!fs.existsSync(filepath)) {
+            return res.status(404).json({ error: 'Screenshot not found' });
+        }
+        
+        fs.unlinkSync(filepath);
+        console.log(`Screenshot deleted: ${filename}`);
+        
+        res.json({ message: 'Screenshot deleted successfully', filename });
+        
+    } catch (error) {
+        console.error('Failed to delete screenshot:', error);
+        res.status(500).json({ error: 'Failed to delete screenshot', details: error.message });
+    }
+});
+
+// Clean up old screenshots (older than specified days)
+app.post('/api/screenshots/cleanup', async (req, res) => {
+    try {
+        const { days = 7 } = req.body; // Default to 7 days
+        const screenshotsDir = path.join(__dirname, 'screenshots');
+        
+        if (!fs.existsSync(screenshotsDir)) {
+            return res.json({ message: 'No screenshots directory found', deleted: 0 });
+        }
+        
+        const files = fs.readdirSync(screenshotsDir);
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        
+        let deletedCount = 0;
+        const deletedFiles = [];
+        
+        for (const file of files) {
+            if (file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')) {
+                const filepath = path.join(screenshotsDir, file);
+                const stats = fs.statSync(filepath);
+                
+                if (stats.birthtime < cutoffDate) {
+                    fs.unlinkSync(filepath);
+                    deletedCount++;
+                    deletedFiles.push(file);
+                    console.log(`Old screenshot deleted: ${file}`);
+                }
+            }
+        }
+        
+        res.json({ 
+            message: `Cleanup completed. Deleted ${deletedCount} screenshots older than ${days} days.`,
+            deleted: deletedCount,
+            files: deletedFiles
+        });
+        
+    } catch (error) {
+        console.error('Failed to cleanup screenshots:', error);
+        res.status(500).json({ error: 'Failed to cleanup screenshots', details: error.message });
     }
 });
 

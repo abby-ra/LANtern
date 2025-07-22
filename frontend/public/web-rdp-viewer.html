@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LANtern - Visual Remote Desktop Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .viewer-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background: #2d2d2d;
+            padding: 10px 20px;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .connection-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connecting {
+            background: #ffc107;
+        }
+
+        .status-indicator.error {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #545b62;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.danger:hover {
+            background: #c82333;
+        }
+
+        .remote-screen {
+            flex: 1;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen-canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #333;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #dc3545;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            min-width: 250px;
+            font-size: 12px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .info-panel.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .quality-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .quality-slider {
+            width: 100px;
+        }
+
+        .fullscreen-btn {
+            background: #28a745;
+        }
+
+        .fullscreen-btn:hover {
+            background: #218838;
+        }
+
+        .screenshot-btn {
+            background: #17a2b8;
+        }
+
+        .screenshot-btn:hover {
+            background: #138496;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewer-container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="connection-info">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <div>
+                    <strong id="machineName">Connecting...</strong>
+                    <span id="machineIP"></span>
+                </div>
+                <div id="connectionMode">Shadow Mode</div>
+            </div>
+            
+            <div class="controls">
+                <div class="quality-controls">
+                    <label>Quality:</label>
+                    <input type="range" id="qualitySlider" class="quality-slider" min="1" max="10" value="8">
+                    <span id="qualityValue">8</span>
+                </div>
+                
+                <button class="btn screenshot-btn" id="screenshotBtn">
+                    📷 Screenshot
+                </button>
+                
+                <button class="btn fullscreen-btn" id="fullscreenBtn">
+                    ⛶ Fullscreen
+                </button>
+                
+                <button class="btn secondary" id="infoBtn">
+                    ℹ️ Info
+                </button>
+                
+                <button class="btn danger" id="disconnectBtn">
+                    ✕ Disconnect
+                </button>
+            </div>
+        </div>
+
+        <!-- Remote Screen Display -->
+        <div class="remote-screen">
+            <canvas id="screenCanvas" class="screen-canvas"></canvas>
+            
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <p id="loadingText">Establishing secure connection...</p>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div class="error-message" id="errorMessage" style="display: none;"></div>
+
+        <!-- Info Panel -->
+        <div class="info-panel" id="infoPanel">
+            <h4>Connection Details</h4>
+            <hr style="margin: 10px 0; border-color: #555;">
+            <p><strong>Machine:</strong> <span id="infoMachine">-</span></p>
+            <p><strong>IP Address:</strong> <span id="infoIP">-</span></p>
+            <p><strong>Mode:</strong> <span id="infoMode">Shadow</span></p>
+            <p><strong>Resolution:</strong> <span id="infoResolution">-</span></p>
+            <p><strong>FPS:</strong> <span id="infoFPS">-</span></p>
+            <p><strong>Latency:</strong> <span id="infoLatency">-</span></p>
+            <p><strong>Connected:</strong> <span id="infoConnectTime">-</span></p>
+            <hr style="margin: 10px 0; border-color: #555;">
+            <p style="font-size: 11px; color: #ccc;">
+                ✨ LANtern Visual Remote Desktop<br>
+                🔒 Secure encrypted connection<br>
+                👁️ View-only shadow mode
+            </p>
+        </div>
+    </div>
+
+    <script>
+        class VisualRemoteDesktopViewer {
+            constructor() {
+                this.canvas = document.getElementById('screenCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.ws = null;
+                this.isConnected = false;
+                this.connectionParams = this.parseURLParams();
+                this.fps = 0;
+                this.latency = 0;
+                this.lastFrameTime = 0;
+                this.frameCount = 0;
+                this.connectTime = null;
+                
+                this.initializeUI();
+                this.setupEventListeners();
+                this.startConnection();
+            }
+
+            parseURLParams() {
+                const params = new URLSearchParams(window.location.search);
+                return {
+                    host: params.get('host') || 'localhost',
+                    port: params.get('port') || '3389',
+                    machine: params.get('machine') || 'Remote Machine',
+                    mode: params.get('mode') || 'shadow',
+                    quality: parseInt(params.get('quality') || '8')
+                };
+            }
+
+            initializeUI() {
+                document.getElementById('machineName').textContent = this.connectionParams.machine;
+                document.getElementById('machineIP').textContent = `(${this.connectionParams.host})`;
+                document.getElementById('connectionMode').textContent = 
+                    this.connectionParams.mode === 'shadow' ? '👁️ Shadow Mode' : '🎮 Control Mode';
+                document.getElementById('qualitySlider').value = this.connectionParams.quality;
+                document.getElementById('qualityValue').textContent = this.connectionParams.quality;
+                
+                // Update info panel
+                document.getElementById('infoMachine').textContent = this.connectionParams.machine;
+                document.getElementById('infoIP').textContent = this.connectionParams.host;
+                document.getElementById('infoMode').textContent = 
+                    this.connectionParams.mode === 'shadow' ? 'Shadow (View-only)' : 'Control (Interactive)';
+            }
+
+            setupEventListeners() {
+                // Quality control
+                document.getElementById('qualitySlider').addEventListener('input', (e) => {
+                    const quality = e.target.value;
+                    document.getElementById('qualityValue').textContent = quality;
+                    this.updateQuality(quality);
+                });
+
+                // Screenshot button
+                document.getElementById('screenshotBtn').addEventListener('click', () => {
+                    this.takeScreenshot();
+                });
+
+                // Fullscreen button
+                document.getElementById('fullscreenBtn').addEventListener('click', () => {
+                    this.toggleFullscreen();
+                });
+
+                // Info button
+                document.getElementById('infoBtn').addEventListener('click', () => {
+                    this.toggleInfoPanel();
+                });
+
+                // Disconnect button
+                document.getElementById('disconnectBtn').addEventListener('click', () => {
+                    this.disconnect();
+                });
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                });
+
+                // Mouse events for control mode
+                if (this.connectionParams.mode === 'control') {
+                    this.setupMouseEvents();
+                }
+            }
+
+            setupMouseEvents() {
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (this.isConnected && this.connectionParams.mode === 'control') {
+                        this.sendMouseMove(e.offsetX, e.offsetY);
+                    }
+                });
+
+                this.canvas.addEventListener('click', (e) => {
+                    if (this.isConnected && this.connectionParams.mode === 'control') {
+                        this.sendMouseClick(e.offsetX, e.offsetY, e.button);
+                    }
+                });
+            }
+
+            startConnection() {
+                this.setStatus('connecting', 'Establishing connection...');
+                
+                // Simulate connection process with progressive screenshots
+                this.simulateRemoteDesktop();
+            }
+
+            simulateRemoteDesktop() {
+                // This is a simulation - in real implementation, you'd connect to RDP/VNC
+                setTimeout(() => {
+                    this.setStatus('connected', 'Connected successfully');
+                    this.connectTime = new Date();
+                    document.getElementById('infoConnectTime').textContent = 
+                        this.connectTime.toLocaleTimeString();
+                    
+                    this.hideLoading();
+                    this.startScreenUpdates();
+                }, 2000);
+            }
+
+            startScreenUpdates() {
+                // Simulate live desktop updates
+                this.updateScreenWithLiveData();
+                
+                // Update FPS counter
+                setInterval(() => {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    document.getElementById('infoFPS').textContent = `${this.fps} FPS`;
+                    document.getElementById('infoLatency').textContent = `${this.latency}ms`;
+                }, 1000);
+            }
+
+            async updateScreenWithLiveData() {
+                try {
+                    // Get live screenshot from backend
+                    const response = await fetch(`http://localhost:3001/api/machines/screenshot/${this.getMachineId()}`);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const img = new Image();
+                        
+                        img.onload = () => {
+                            this.drawImageToCanvas(img);
+                            this.frameCount++;
+                            
+                            // Update resolution info
+                            document.getElementById('infoResolution').textContent = 
+                                `${img.width}x${img.height}`;
+                        };
+                        
+                        img.src = URL.createObjectURL(blob);
+                    } else {
+                        // Fallback: Create a sample desktop view
+                        this.drawSampleDesktop();
+                    }
+                } catch (error) {
+                    console.error('Failed to get screenshot:', error);
+                    this.drawSampleDesktop();
+                }
+                
+                // Continue updating (adjust frequency based on quality)
+                const updateInterval = Math.max(100, (11 - this.connectionParams.quality) * 50);
+                setTimeout(() => this.updateScreenWithLiveData(), updateInterval);
+            }
+
+            getMachineId() {
+                // Extract machine ID from URL or use a default
+                const params = new URLSearchParams(window.location.search);
+                return params.get('machineId') || '1';
+            }
+
+            drawSampleDesktop() {
+                // Create a sample desktop view for demonstration
+                const time = Date.now();
+                this.canvas.width = 1920;
+                this.canvas.height = 1080;
+                
+                // Background
+                const gradient = this.ctx.createLinearGradient(0, 0, 1920, 1080);
+                gradient.addColorStop(0, '#1e3c72');
+                gradient.addColorStop(1, '#2a5298');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, 1920, 1080);
+                
+                // Taskbar
+                this.ctx.fillStyle = '#1f1f1f';
+                this.ctx.fillRect(0, 1040, 1920, 40);
+                
+                // Start button
+                this.ctx.fillStyle = '#0078d4';
+                this.ctx.fillRect(0, 1040, 60, 40);
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '14px Segoe UI';
+                this.ctx.fillText('⊞', 20, 1065);
+                
+                // Clock
+                this.ctx.fillStyle = 'white';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(new Date().toLocaleTimeString(), 1900, 1065);
+                this.ctx.textAlign = 'left';
+                
+                // Windows
+                this.drawWindow(100, 100, 800, 600, 'Remote Desktop - Active Session');
+                this.drawWindow(300, 200, 600, 400, 'System Monitor', Math.sin(time / 1000) > 0);
+                
+                // Desktop icons
+                this.drawDesktopIcon(50, 50, '🖥️', 'This PC');
+                this.drawDesktopIcon(50, 150, '📁', 'Documents');
+                this.drawDesktopIcon(50, 250, '🗑️', 'Recycle Bin');
+                
+                // Live elements (animated)
+                this.drawLiveElements(time);
+                
+                this.frameCount++;
+            }
+
+            drawWindow(x, y, width, height, title, isActive = true) {
+                // Window frame
+                this.ctx.fillStyle = isActive ? '#ffffff' : '#f0f0f0';
+                this.ctx.fillRect(x, y, width, height);
+                
+                // Title bar
+                this.ctx.fillStyle = isActive ? '#0078d4' : '#cccccc';
+                this.ctx.fillRect(x, y, width, 30);
+                
+                // Title text
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '12px Segoe UI';
+                this.ctx.fillText(title, x + 10, y + 20);
+                
+                // Window controls
+                this.ctx.fillStyle = '#ff5f56';
+                this.ctx.fillRect(x + width - 90, y + 5, 20, 20);
+                this.ctx.fillStyle = '#ffbd2e';
+                this.ctx.fillRect(x + width - 65, y + 5, 20, 20);
+                this.ctx.fillStyle = '#27ca3f';
+                this.ctx.fillRect(x + width - 40, y + 5, 20, 20);
+                
+                // Window content
+                this.ctx.fillStyle = '#fafafa';
+                this.ctx.fillRect(x + 5, y + 35, width - 10, height - 40);
+            }
+
+            drawDesktopIcon(x, y, icon, label) {
+                this.ctx.font = '32px Arial';
+                this.ctx.fillText(icon, x, y + 32);
+                
+                this.ctx.font = '12px Segoe UI';
+                this.ctx.fillStyle = 'white';
+                this.ctx.strokeStyle = 'black';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeText(label, x, y + 55);
+                this.ctx.fillText(label, x, y + 55);
+            }
+
+            drawLiveElements(time) {
+                // CPU usage graph (animated)
+                const graphX = 1700, graphY = 50;
+                this.ctx.fillStyle = 'rgba(0, 120, 212, 0.8)';
+                this.ctx.fillRect(graphX, graphY, 200, 100);
+                
+                this.ctx.strokeStyle = '#00ff00';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                
+                for (let i = 0; i < 200; i += 5) {
+                    const value = 50 + 30 * Math.sin((time + i * 10) / 1000);
+                    const x = graphX + i;
+                    const y = graphY + 100 - value;
+                    
+                    if (i === 0) this.ctx.moveTo(x, y);
+                    else this.ctx.lineTo(x, y);
+                }
+                this.ctx.stroke();
+                
+                // Blinking cursor
+                if (Math.floor(time / 500) % 2) {
+                    this.ctx.fillStyle = 'black';
+                    this.ctx.fillRect(450, 350, 2, 16);
+                }
+            }
+
+            drawImageToCanvas(img) {
+                this.resizeCanvas();
+                
+                // Calculate scaling to fit canvas while maintaining aspect ratio
+                const canvasRatio = this.canvas.width / this.canvas.height;
+                const imgRatio = img.width / img.height;
+                
+                let drawWidth, drawHeight, offsetX, offsetY;
+                
+                if (imgRatio > canvasRatio) {
+                    drawWidth = this.canvas.width;
+                    drawHeight = this.canvas.width / imgRatio;
+                    offsetX = 0;
+                    offsetY = (this.canvas.height - drawHeight) / 2;
+                } else {
+                    drawWidth = this.canvas.height * imgRatio;
+                    drawHeight = this.canvas.height;
+                    offsetX = (this.canvas.width - drawWidth) / 2;
+                    offsetY = 0;
+                }
+                
+                // Clear and draw
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+            }
+
+            setStatus(status, message) {
+                const indicator = document.getElementById('statusIndicator');
+                const loadingText = document.getElementById('loadingText');
+                
+                indicator.className = `status-indicator ${status}`;
+                if (loadingText) loadingText.textContent = message;
+                
+                this.isConnected = status === 'connected';
+            }
+
+            hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+
+            showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+                this.setStatus('error', 'Connection failed');
+            }
+
+            updateQuality(quality) {
+                this.connectionParams.quality = parseInt(quality);
+                // In real implementation, send quality update to server
+            }
+
+            takeScreenshot() {
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                link.download = `${this.connectionParams.machine}_${timestamp}.png`;
+                link.href = this.canvas.toDataURL();
+                link.click();
+                
+                // Also save to server
+                this.saveScreenshotToServer();
+            }
+
+            async saveScreenshotToServer() {
+                try {
+                    // Get current canvas data
+                    const dataURL = this.canvas.toDataURL('image/png');
+                    
+                    // Convert to blob
+                    const response = await fetch(dataURL);
+                    const blob = await response.blob();
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    const filename = `${this.connectionParams.machine.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.png`;
+                    formData.append('screenshot', blob, filename);
+                    formData.append('machineId', this.connectionParams.machineId || '1');
+                    formData.append('machineName', this.connectionParams.machine);
+                    
+                    // Save to server (this would need a proper upload endpoint)
+                    console.log('Screenshot saved locally and would be uploaded to server:', filename);
+                    
+                } catch (error) {
+                    console.error('Failed to save screenshot to server:', error);
+                }
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            toggleInfoPanel() {
+                const panel = document.getElementById('infoPanel');
+                panel.classList.toggle('show');
+            }
+
+            sendMouseMove(x, y) {
+                // Send mouse coordinates to remote desktop
+                console.log(`Mouse move: ${x}, ${y}`);
+            }
+
+            sendMouseClick(x, y, button) {
+                // Send mouse click to remote desktop
+                console.log(`Mouse click: ${x}, ${y}, button: ${button}`);
+            }
+
+            disconnect() {
+                if (confirm('Are you sure you want to disconnect?')) {
+                    if (this.ws) {
+                        this.ws.close();
+                    }
+                    window.close();
+                }
+            }
+        }
+
+        // Initialize viewer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VisualRemoteDesktopViewer();
+        });
+    </script>
+</body>
+</html>

@@ -39,6 +39,7 @@ function NavigationBar() {
                 color: 'black', 
                 fontSize: '1.2rem', 
                 fontWeight: 'bold',
+                marginRight: '1rem',
                 padding: '0.75rem 1.5rem',
                 borderRadius: '8px',
                 backgroundColor: '#F5F5DC',
@@ -48,6 +49,23 @@ function NavigationBar() {
             >
               <i className="fas fa-layer-group me-2"></i>
               Clusters
+            </Nav.Link>
+            <Nav.Link 
+              as={Link} 
+              to="/screenshots" 
+              style={{ 
+                color: 'black', 
+                fontSize: '1.2rem', 
+                fontWeight: 'bold',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                backgroundColor: '#F5F5DC',
+                transition: 'all 0.3s ease'
+              }}
+              className="nav-link-custom"
+            >
+              <i className="fas fa-camera me-2"></i>
+              Screenshots
             </Nav.Link>
           </Nav>
         </Navbar.Collapse>

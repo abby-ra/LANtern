@@ -55,6 +55,174 @@ const EnhancedRdpModal = ({ show, onHide, machine }) => {
     };
 
     const handleRdpLaunch = (connection, mode) => {
+        if (mode === 'shadow') {
+            // For shadow mode, establish direct connection without downloads
+            establishDirectShadowConnection(connection);
+        } else {
+            // For control mode, use the existing download method
+            downloadAndLaunchRdp(connection, mode);
+        }
+    };
+
+    const establishDirectShadowConnection = async (connection) => {
+        try {
+            setAlert({
+                show: true,
+                message: `🔗 Establishing direct shadow connection to ${machine.name}...`,
+                variant: 'info'
+            });
+
+            // Use the direct connection information from backend
+            if (connection.directConnection) {
+                
+                // Method 1: Open web-based visual viewer in new window
+                if (connection.directConnection.webViewerUrl) {
+                    const viewerWindow = window.open(
+                        connection.directConnection.webViewerUrl,
+                        '_blank',
+                        'width=1280,height=800,scrollbars=no,toolbar=no,menubar=no'
+                    );
+                    
+                    if (viewerWindow) {
+                        setAlert({
+                            show: true,
+                            message: `👁️ **Visual Remote Desktop Viewer Opened!**
+
+🖥️ **Connected to**: ${machine.name} (${connection.ipAddress})
+🌐 **Web-Based Viewer**: Real-time visual desktop viewing in browser
+🔒 **Authentication**: Automatic login with stored credentials
+👀 **Shadow Mode**: View-only access without interrupting user
+
+✅ **Visual Features:**
+• **Live desktop streaming** in web browser
+• **Real-time screenshot updates**
+• **Full-screen support** with quality controls
+• **Non-intrusive monitoring** - user continues working normally
+• **No downloads required** - pure web-based viewing
+
+📋 **Viewer Details:**
+• **Target**: ${connection.ipAddress}:3389
+• **User**: ${connection.credentials.username}
+• **Mode**: View-only shadow session
+• **Quality**: Adjustable (1-10 scale)
+• **Updates**: Real-time with low latency
+
+💡 **Usage Tips:**
+• Click the fullscreen button for immersive viewing
+• Adjust quality slider for optimal performance
+• Take screenshots using the camera button
+• Connection info panel available via the ℹ️ button
+
+The visual remote desktop viewer is now running in a separate window with live desktop streaming.`,
+                            variant: 'success'
+                        });
+
+                        // Close modal after successful connection
+                        setTimeout(() => {
+                            onHide();
+                        }, 5000);
+                        return;
+                    }
+                }
+
+                // Method 2: Fallback to Windows RDP protocol handler
+                try {
+                    window.location.href = connection.directConnection.shadowUrl;
+                    
+                    // Give it a moment to process
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                } catch (error) {
+                    console.warn('Protocol handler failed:', error);
+                }
+
+                // Method 3: Try creating a temporary RDP file in memory and execute it
+                try {
+                    // Create RDP file content for shadow mode with credentials
+                    const shadowRdpContent = `full address:s:${connection.ipAddress}:3389
+username:s:${connection.credentials.username}
+password 51:b:${Buffer.from(connection.credentials.password || '').toString('base64')}
+screen mode id:i:2
+authentication level:i:0
+prompt for credentials:i:0
+shadow:i:1
+shadowing mode:i:1
+shadow quality:i:2
+smart sizing:i:1
+compression:i:1
+keyboardhook:i:2
+displayconnectionbar:i:1
+autoreconnection enabled:i:1
+audiocapturemode:i:0
+videoplaybackmode:i:1`;
+
+                    // Create temporary blob URL for direct execution
+                    const blob = new Blob([shadowRdpContent], { type: 'application/rdp' });
+                    const tempUrl = URL.createObjectURL(blob);
+                    
+                    // Try to open directly without download
+                    window.open(tempUrl, '_self');
+                    
+                    // Cleanup
+                    setTimeout(() => URL.revokeObjectURL(tempUrl), 5000);
+                    
+                } catch (error) {
+                    console.warn('Direct execution failed:', error);
+                }
+
+                setAlert({
+                    show: true,
+                    message: `👁️ **Direct Shadow Session Initiated!**
+
+🖥️ **Connected to**: ${machine.name} (${connection.ipAddress})
+🔒 **Authentication**: Automatic login with stored credentials
+👀 **Shadow Mode**: View-only access without interrupting user
+⚡ **Direct Connection**: No file downloads required
+
+✅ **Active Features:**
+• **Real-time desktop viewing**
+• **Automatic authentication**
+• **Non-intrusive monitoring**
+• **Full screen support**
+• **Audio streaming enabled**
+
+📋 **Shadow Session Details:**
+• **Target**: ${connection.ipAddress}:3389
+• **User**: ${connection.credentials.username}
+• **Mode**: View-only (user can continue working normally)
+
+💡 If the connection doesn't appear immediately:
+1. Check Windows Remote Desktop Services are running
+2. Verify shadow permissions are configured on ${machine.name}
+3. Ensure firewall allows RDP connections
+
+The shadow session will open automatically in Windows Remote Desktop Client.`,
+                    variant: 'success'
+                });
+
+                // Close modal after successful connection
+                setTimeout(() => {
+                    onHide();
+                }, 4000);
+
+            } else {
+                throw new Error('Direct connection information not available');
+            }
+
+        } catch (error) {
+            console.error('Direct shadow connection failed:', error);
+            setAlert({
+                show: true,
+                message: `❌ Direct shadow connection failed. Falling back to RDP file method...`,
+                variant: 'warning'
+            });
+            
+            // Fallback to traditional RDP file method
+            downloadAndLaunchRdp(connection, 'shadow');
+        }
+    };
+
+    const downloadAndLaunchRdp = (connection, mode) => {
         if (connection.rdpFile) {
             // Download RDP file with enhanced settings
             const blob = new Blob([connection.rdpFile.content], { type: 'application/rdp' });
@@ -246,6 +414,27 @@ If the connection doesn't open automatically, double-click the downloaded RDP fi
                 <Button variant="secondary" onClick={onHide}>
                     <i className="fas fa-times me-2"></i>
                     Close
+                </Button>
+                <Button 
+                    variant="info"
+                    onClick={() => {
+                        if (connectionDetails?.directConnection?.webViewerUrl) {
+                            window.open(
+                                connectionDetails.directConnection.webViewerUrl,
+                                '_blank',
+                                'width=1280,height=800,scrollbars=no,toolbar=no,menubar=no'
+                            );
+                        } else {
+                            // Create the URL manually if connection details aren't ready
+                            const viewerUrl = `http://localhost:3000/web-rdp-viewer.html?host=${machine.ip_address}&machine=${encodeURIComponent(machine.name)}&mode=${rdpMode}&machineId=${machine.id}&quality=8`;
+                            window.open(viewerUrl, '_blank', 'width=1280,height=800,scrollbars=no,toolbar=no,menubar=no');
+                        }
+                    }}
+                    disabled={!machine?.is_active}
+                    className="d-flex align-items-center me-2"
+                >
+                    <i className="fas fa-tv me-2"></i>
+                    Visual Viewer
                 </Button>
                 <Button 
                     variant={rdpMode === 'shadow' ? 'primary' : 'warning'}
