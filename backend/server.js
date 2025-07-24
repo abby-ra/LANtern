@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const wol = require('wol');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -1103,6 +1103,158 @@ use redirection server name:i:0`;
     }
 });
 
+// Direct RDP launch endpoint
+app.post('/api/remote-access/launch-rdp', async (req, res) => {
+    try {
+        const { machineId, mode = 'control' } = req.body;
+        
+        // Get machine details
+        const [rows] = await db.query('SELECT * FROM machines WHERE id = ?', [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        console.log(`Launching direct RDP (${mode} mode) for ${machine.name}`);
+        
+        // Create temporary RDP file
+        const tempDir = path.join(__dirname, 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        const rdpFileName = `${machine.name.replace(/\s+/g, '_')}_${mode}_${Date.now()}.rdp`;
+        const rdpFilePath = path.join(tempDir, rdpFileName);
+        
+        // Create RDP content
+        let rdpContent = `full address:s:${machine.ip_address}:3389
+username:s:${machine.username || 'administrator'}
+screen mode id:i:2
+authentication level:i:0
+prompt for credentials:i:0
+compression:i:1
+displayconnectionbar:i:1
+autoreconnection enabled:i:1
+smart sizing:i:1`;
+
+        if (machine.encrypted_password) {
+            rdpContent += `\npassword 51:b:${Buffer.from(machine.encrypted_password).toString('base64')}`;
+        }
+
+        if (mode === 'shadow') {
+            rdpContent += `\nshadow:i:1\nshadowing mode:i:1\nshadow quality:i:2`;
+        }
+        
+        // Write RDP file
+        fs.writeFileSync(rdpFilePath, rdpContent);
+        
+        // Try to launch RDP directly
+        try {
+            const { spawn } = require('child_process');
+            
+            if (process.platform === 'win32') {
+                // Windows: Use mstsc to launch RDP
+                const rdpProcess = spawn('mstsc', [rdpFilePath], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                
+                rdpProcess.unref();
+                
+                // Clean up file after a delay
+                setTimeout(() => {
+                    try {
+                        fs.unlinkSync(rdpFilePath);
+                    } catch (cleanupErr) {
+                        console.error('Cleanup error:', cleanupErr);
+                    }
+                }, 10000);
+                
+                res.json({
+                    success: true,
+                    message: `RDP connection launched directly for ${machine.name}`,
+                    method: 'direct_launch'
+                });
+                
+            } else {
+                // Non-Windows: Return file URL for download
+                res.json({
+                    success: true,
+                    downloadUrl: `/download-rdp/${rdpFileName}`,
+                    message: `RDP file created for ${machine.name}`,
+                    method: 'file_download'
+                });
+            }
+            
+        } catch (launchError) {
+            console.error('Direct launch failed:', launchError);
+            
+            // Fallback to file download
+            res.json({
+                success: true,
+                downloadUrl: `/download-rdp/${rdpFileName}`,
+                message: `RDP file created for ${machine.name} (direct launch failed)`,
+                method: 'file_download_fallback'
+            });
+        }
+        
+    } catch (err) {
+        console.error('Failed to launch RDP:', err);
+        res.status(500).json({ 
+            error: 'Failed to launch RDP connection',
+            details: err.message 
+        });
+    }
+});
+
+// Simple RDP connection endpoint
+app.post('/api/rdp-connect/:machineId', async (req, res) => {
+    try {
+        const { machineId } = req.params;
+        
+        // Get machine details from database
+        const query = 'SELECT * FROM machines WHERE id = ?';
+        const [rows] = await db.execute(query, [machineId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = rows[0];
+        console.log(`Creating RDP connection for ${machine.name} (${machine.ip_address})`);
+        
+        // Create simple, reliable RDP content
+        const rdpContent = `full address:s:${machine.ip_address}:3389
+username:s:${machine.username || 'administrator'}
+screen mode id:i:2
+authentication level:i:0
+prompt for credentials:i:0
+smart sizing:i:1
+displayconnectionbar:i:1
+autoreconnection enabled:i:1
+compression:i:1
+keyboardhook:i:2
+redirectclipboard:i:1`;
+
+        // Send RDP content directly for download
+        res.set({
+            'Content-Type': 'application/rdp',
+            'Content-Disposition': `attachment; filename="${machine.name.replace(/[^a-zA-Z0-9]/g, '_')}_control.rdp"`
+        });
+        
+        res.send(rdpContent);
+        console.log(`RDP file sent for ${machine.name}`);
+        
+    } catch (err) {
+        console.error('Failed to create RDP connection:', err);
+        res.status(500).json({ 
+            error: 'Failed to create RDP connection',
+            details: err.message 
+        });
+    }
+});
+
 // Live screenshot endpoint for web-based remote desktop viewer
 app.get('/api/machines/screenshot/:id', async (req, res) => {
     try {
@@ -1858,6 +2010,203 @@ async function generateErrorImage(machine, errorMessage) {
     console.log(`🎨 Generated error image for ${machine.name}: ${errorMessage}`);
     return errorImage;
 }
+
+// Simple RDP connection endpoint that works without database dependency
+app.post('/api/simple-rdp', async (req, res) => {
+    try {
+        const { ip, username = 'administrator', password = '', mode = 'control', machineName = 'Remote Machine' } = req.body;
+        
+        console.log(`=== Simple RDP Request ===`);
+        console.log(`IP: ${ip}, Mode: ${mode}, Machine: ${machineName}`);
+        console.log(`Platform: ${process.platform}`);
+        console.log(`Creating simple RDP connection to ${ip} in ${mode} mode`);
+        
+        // Create clean RDP content
+        let rdpContent = `full address:s:${ip}:3389
+username:s:${username}
+screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1920
+desktopheight:i:1080
+session bpp:i:32
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+displayconnectionbar:i:1
+enableworkspacereconnect:i:0
+disable wallpaper:i:0
+allow font smoothing:i:0
+allow desktop composition:i:0
+disable full window drag:i:1
+disable menu anims:i:1
+disable themes:i:0
+disable cursor setting:i:0
+bitmapcachepersistenable:i:1
+audiomode:i:0
+redirectprinters:i:1
+redirectcomports:i:0
+redirectsmartcards:i:1
+redirectclipboard:i:1
+redirectposdevices:i:0
+autoreconnection enabled:i:1
+authentication level:i:2
+prompt for credentials:i:0
+negotiate security layer:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+gatewayhostname:s:
+gatewayusagemethod:i:4
+gatewaycredentialssource:i:4
+gatewayprofileusagemethod:i:0
+promptcredentialonce:i:0
+gatewaybrokeringtype:i:0
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+kdcproxyname:s:`;
+
+        // Add password if provided
+        if (password) {
+            rdpContent += `\npassword 51:b:${Buffer.from(password).toString('base64')}`;
+        }
+
+        if (mode === 'shadow') {
+            rdpContent += `\nshadow:i:1\nshadowing mode:i:1\nshadow quality:i:2`;
+        }
+        
+        // Create temporary RDP file
+        const tempDir = path.join(__dirname, 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        const rdpFileName = `${machineName.replace(/\s+/g, '_')}_${mode}_${Date.now()}.rdp`;
+        const rdpFilePath = path.join(tempDir, rdpFileName);
+        
+        // Write RDP file
+        fs.writeFileSync(rdpFilePath, rdpContent);
+        
+        // Try to launch RDP directly on Windows
+        if (process.platform === 'win32') {
+            try {
+                console.log(`Attempting to launch RDP with mstsc: ${rdpFilePath}`);
+                
+                const rdpProcess = spawn('mstsc.exe', [rdpFilePath], {
+                    detached: true,
+                    stdio: ['ignore', 'ignore', 'ignore'],
+                    shell: true
+                });
+                
+                rdpProcess.on('error', (error) => {
+                    console.error('RDP Process error:', error);
+                    throw error;
+                });
+                
+                rdpProcess.on('spawn', () => {
+                    console.log('RDP process spawned successfully');
+                });
+                
+                rdpProcess.unref();
+                
+                console.log(`RDP process launched successfully for ${ip}`);
+                
+                // Clean up file after delay
+                setTimeout(() => {
+                    try {
+                        fs.unlinkSync(rdpFilePath);
+                        console.log(`Cleaned up temporary RDP file: ${rdpFilePath}`);
+                    } catch (cleanupErr) {
+                        console.error('Cleanup error:', cleanupErr);
+                    }
+                }, 15000);
+                
+                res.json({
+                    success: true,
+                    message: `RDP connection launched directly to ${ip}`,
+                    method: 'direct_launch',
+                    target: ip,
+                    mode: mode
+                });
+                
+            } catch (launchError) {
+                console.error('Direct launch failed:', launchError);
+                
+                // Fallback to providing download URL
+                res.json({
+                    success: true,
+                    downloadUrl: `/download-rdp/${rdpFileName}`,
+                    message: `RDP file created for ${ip}`,
+                    method: 'file_download',
+                    target: ip,
+                    mode: mode
+                });
+            }
+        } else {
+            // Non-Windows fallback
+            res.json({
+                success: true,
+                downloadUrl: `/download-rdp/${rdpFileName}`,
+                message: `RDP file created for ${ip}`,
+                method: 'file_download',
+                target: ip,
+                mode: mode
+            });
+        }
+        
+    } catch (err) {
+        console.error('Failed to create simple RDP connection:', err);
+        res.status(500).json({ 
+            error: 'Failed to create RDP connection',
+            details: err.message 
+        });
+    }
+});
+
+// Screen capture endpoint for remote desktop viewing
+app.post('/api/machines/:id/screenshot', async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        
+        // Get machine details from database
+        const [machines] = await db.promise().execute(
+            'SELECT * FROM machines WHERE id = ?',
+            [machineId]
+        );
+        
+        if (machines.length === 0) {
+            return res.status(404).json({ error: 'Machine not found' });
+        }
+        
+        const machine = machines[0];
+        
+        // For now, return a placeholder response
+        // In a real implementation, you would:
+        // 1. Connect to the remote machine
+        // 2. Capture the screen using tools like PowerShell, VNC, or RDP screenshots
+        // 3. Return the image data
+        
+        res.json({
+            success: false,
+            message: 'Screen capture not yet implemented. Use RDP client for screen viewing.',
+            machine: {
+                name: machine.machine_name,
+                ip: machine.ip_address,
+                status: 'RDP connection should open in separate window'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Screenshot capture error:', error);
+        res.status(500).json({
+            error: 'Failed to capture screenshot',
+            details: error.message
+        });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

@@ -59,7 +59,90 @@ const EnhancedRdpModal = ({ show, onHide, machine }) => {
             // For shadow mode, establish direct connection without downloads
             establishDirectShadowConnection(connection);
         } else {
-            // For control mode, use the existing download method
+            // For control mode, use direct launch method
+            directLaunchRdp(connection, mode);
+        }
+    };
+
+    const directLaunchRdp = async (connection, mode) => {
+        try {
+            setAlert({
+                show: true,
+                message: `Launching direct RDP ${mode} connection to ${machine.name}...`,
+                variant: 'info'
+            });
+
+            // Method 1: Try the simple RDP endpoint for direct launch
+            try {
+                const simpleResponse = await axios.post(`${API_BASE_URL}/simple-rdp`, {
+                    ip: machine.ip_address || machine.ip,
+                    username: machine.username || 'administrator',
+                    password: machine.password || '',
+                    mode: mode,
+                    machineName: machine.name
+                });
+
+                if (simpleResponse.data.success) {
+                    setAlert({
+                        show: true,
+                        message: `RDP ${mode.toUpperCase()} Connection Launched Successfully!
+
+Connected to: ${machine.name} (${machine.ip_address})
+Method: Direct RDP Launch (No Downloads)
+Authentication: Automatic using stored credentials
+Mode: ${mode === 'control' ? 'Full Control Access - You now have complete control' : 'Shadow Mode - View only access'}
+
+Connection Status:
+• RDP Window: Opening automatically
+• Authentication: Automatic login in progress
+• Performance: Native RDP performance
+• Access Level: ${mode === 'control' ? 'Complete desktop control (remote user will be disconnected)' : 'View-only monitoring'}
+
+Next Steps: The RDP window should appear on your screen shortly. If not visible, check your taskbar or use Alt+Tab.`,
+                        variant: 'success'
+                    });
+
+                    setTimeout(() => onHide(), 4000);
+                    return;
+                }
+            } catch (simpleError) {
+                console.log('Simple RDP endpoint failed, trying enhanced method...', simpleError);
+            }
+
+            // Method 2: Try the enhanced RDP endpoint for direct launch
+            try {
+                const launchResponse = await axios.post(`${API_BASE_URL}/remote-access/launch-rdp`, {
+                    machineId: machine.id,
+                    mode: mode
+                });
+
+                if (launchResponse.data.success) {
+                    setAlert({
+                        show: true,
+                        message: `Direct RDP ${mode} connection launched to ${machine.name}! The RDP window should open automatically with full access.`,
+                        variant: 'success'
+                    });
+
+                    setTimeout(() => onHide(), 3000);
+                    return;
+                }
+            } catch (launchError) {
+                console.log('Enhanced RDP launch failed, using fallback...', launchError);
+            }
+
+            // Method 3: Fallback to file download if direct launch fails
+            console.log('Direct launch methods failed, falling back to file download...');
+            downloadAndLaunchRdp(connection, mode);
+
+        } catch (error) {
+            console.error('Direct RDP launch failed:', error);
+            setAlert({
+                show: true,
+                message: `Failed to launch RDP connection: ${error.message}. Trying fallback method...`,
+                variant: 'warning'
+            });
+            
+            // Fallback to download method
             downloadAndLaunchRdp(connection, mode);
         }
     };

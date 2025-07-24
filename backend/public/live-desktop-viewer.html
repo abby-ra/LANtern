@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Desktop Viewer - LANtern</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+
+        .viewer-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+
+        .toolbar {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #34495e;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            min-height: 60px;
+        }
+
+        .machine-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #27ae60;
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connecting {
+            background: #f39c12;
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.6);
+        }
+
+        .status-indicator.offline {
+            background: #e74c3c;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.6);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .machine-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ecf0f1;
+        }
+
+        .machine-ip {
+            font-size: 14px;
+            color: #bdc3c7;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-secondary {
+            background: #7f8c8d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #6c7b7d;
+        }
+
+        .desktop-frame {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #2c3e50;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .desktop-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            border-radius: 0;
+        }
+
+        .connection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .connection-status {
+            text-align: center;
+            color: white;
+        }
+
+        .connection-status h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .connection-status p {
+            font-size: 16px;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #3498db;
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .quality-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quality-selector select {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        .quality-selector select option {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 250px;
+            display: none;
+        }
+
+        .info-panel.show {
+            display: block;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: #bdc3c7;
+        }
+
+        .info-value {
+            color: #ecf0f1;
+            font-weight: 500;
+        }
+
+        /* WebRTC Specific Styles */
+        .screen-share-controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        .webrtc-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .connection-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .connection-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        #remoteVideo {
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="viewer-container">
+        <div class="toolbar">
+            <div class="machine-info">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <div class="machine-name" id="machineName">Loading...</div>
+                <div class="machine-ip" id="machineIP">Connecting...</div>
+            </div>
+            
+            <div class="controls">
+                <div class="quality-selector">
+                    <label for="quality">Quality:</label>
+                    <select id="quality" onchange="changeQuality()">
+                        <option value="low">Low (Fast)</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High (Slow)</option>
+                        <option value="ultra">Ultra (Slowest)</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" onclick="toggleFullscreen()">
+                    <span>🔳</span> Fullscreen
+                </button>
+                
+                <button class="btn btn-success" onclick="reconnect()">
+                    <span>🔄</span> Reconnect
+                </button>
+                
+                <button class="btn btn-secondary" onclick="toggleInfo()">
+                    <span>ℹ️</span> Info
+                </button>
+                
+                <button class="btn btn-danger" onclick="closeViewer()">
+                    <span>✕</span> Close
+                </button>
+            </div>
+        </div>
+
+        <div class="desktop-frame">
+            <!-- WebRTC Video Element for Screen Sharing -->
+            <video id="remoteVideo" autoplay playsinline muted style="width: 100%; height: 100%; display: none; background: #000; object-fit: contain;"></video>
+            
+            <!-- Screen Share Controls -->
+            <div class="screen-share-controls" id="screenShareControls" style="display: none;">
+                <button class="btn btn-success" onclick="startScreenShare()">
+                    <span>📺</span> Start Screen Share
+                </button>
+                <button class="btn btn-danger" onclick="stopScreenShare()" style="display: none;" id="stopShareBtn">
+                    <span>⏹️</span> Stop Share
+                </button>
+            </div>
+            
+            <!-- Fallback iframe (hidden by default) -->
+            <iframe id="desktopFrame" class="desktop-iframe" style="display: none;"></iframe>
+            
+            <div class="connection-overlay" id="connectionOverlay">
+                <div class="connection-status">
+                    <h2 id="connectionTitle">WebRTC Remote Desktop</h2>
+                    <p id="connectionMessage">Setting up screen sharing connection...</p>
+                    <div class="spinner"></div>
+                    <p id="connectionDetails"></p>
+                    
+                    <!-- WebRTC Connection Options -->
+                    <div class="webrtc-options" style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="initializeWebRTC()" style="margin: 5px;">
+                            <span>🔗</span> Connect via WebRTC
+                        </button>
+                        <button class="btn btn-secondary" onclick="showFallbackOptions()" style="margin: 5px;">
+                            <span>🖥️</span> Use RDP/VNC Instead
+                        </button>
+                    </div>
+                    
+                    <!-- Fallback Options -->
+                    <div id="fallbackOptions" style="display: none; margin-top: 20px;">
+                        <h3>Alternative Connection Methods:</h3>
+                        <button class="btn btn-info" onclick="downloadRDPFile()" style="margin: 5px;">
+                            <span>📁</span> Download RDP File
+                        </button>
+                        <button class="btn btn-warning" onclick="openVNCConnection()" style="margin: 5px;">
+                            <span>📺</span> Open VNC Connection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <div class="info-row">
+                <span class="info-label">Machine:</span>
+                <span class="info-value" id="infoMachine">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">IP Address:</span>
+                <span class="info-value" id="infoIP">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-value" id="infoStatus">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Quality:</span>
+                <span class="info-value" id="infoQuality">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Connected:</span>
+                <span class="info-value" id="infoConnected">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LiveDesktopViewer {
+            constructor() {
+                this.params = new URLSearchParams(window.location.search);
+                this.machineId = this.params.get('machineId');
+                this.machineName = this.params.get('machine') || 'Unknown Machine';
+                this.hostIP = this.params.get('host') || 'localhost';
+                this.mode = this.params.get('mode') || 'view';
+                this.quality = this.params.get('quality') || 'medium';
+                this.autoConnect = this.params.get('autoconnect') === 'true';
+                this.username = this.params.get('username') || 'administrator';
+                
+                this.isConnected = false;
+                this.connectionStartTime = Date.now();
+                this.localStream = null;
+                this.peerConnection = null;
+                this.isScreenSharing = false;
+                
+                this.initializeViewer();
+            }
+
+            initializeViewer() {
+                // Update UI with machine info
+                document.getElementById('machineName').textContent = this.machineName;
+                document.getElementById('machineIP').textContent = this.hostIP;
+                document.getElementById('quality').value = this.quality;
+                
+                // Update info panel
+                document.getElementById('infoMachine').textContent = this.machineName;
+                document.getElementById('infoIP').textContent = this.hostIP;
+                document.getElementById('infoQuality').textContent = this.quality.toUpperCase();
+                
+                // Show WebRTC options by default
+                this.showWebRTCOptions();
+                
+                // Auto-connect if specified
+                if (this.autoConnect) {
+                    this.initializeWebRTC();
+                }
+                
+                console.log('Live Desktop Viewer initialized with WebRTC:', {
+                    machineId: this.machineId,
+                    machineName: this.machineName,
+                    hostIP: this.hostIP,
+                    mode: this.mode,
+                    quality: this.quality
+                });
+            }
+
+            showWebRTCOptions() {
+                this.updateConnectionStatus('ready', 'WebRTC Remote Desktop Ready', 'Click "Connect via WebRTC" to start screen sharing or use alternative methods.');
+            }
+
+            async initializeWebRTC() {
+                try {
+                    this.updateConnectionStatus('connecting', 'Starting WebRTC Connection', 'Requesting screen access permissions...');
+                    
+                    // Check if WebRTC is supported
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                        throw new Error('WebRTC screen sharing is not supported in this browser. Please use Chrome, Firefox, or Edge.');
+                    }
+                    
+                    // For demonstration, we'll start screen sharing from the local machine
+                    // In a real implementation, you'd connect to the remote machine's screen
+                    await this.startLocalScreenDemo();
+                    
+                } catch (error) {
+                    console.error('WebRTC initialization failed:', error);
+                    this.updateConnectionStatus('error', 'WebRTC Failed', error.message);
+                    this.showFallbackOptions();
+                }
+            }
+
+            async startLocalScreenDemo() {
+                try {
+                    // Request screen capture (this is a demo - normally you'd connect to remote)
+                    this.localStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: {
+                            mediaSource: 'screen'
+                        },
+                        audio: true
+                    });
+                    
+                    // Display the screen in the video element
+                    const videoElement = document.getElementById('remoteVideo');
+                    videoElement.srcObject = this.localStream;
+                    videoElement.style.display = 'block';
+                    
+                    // Hide connection overlay
+                    document.getElementById('connectionOverlay').style.display = 'none';
+                    
+                    // Show screen share controls
+                    document.getElementById('screenShareControls').style.display = 'block';
+                    document.getElementById('stopShareBtn').style.display = 'inline-block';
+                    
+                    this.isScreenSharing = true;
+                    this.updateConnectionStatus('connected', 'Screen Sharing Active', 'Demo: Showing local screen. In production, this would show the remote machine.');
+                    
+                    // Handle stream end
+                    this.localStream.getVideoTracks()[0].addEventListener('ended', () => {
+                        this.stopScreenShare();
+                    });
+                    
+                } catch (error) {
+                    console.error('Screen sharing failed:', error);
+                    this.updateConnectionStatus('error', 'Screen Sharing Failed', 'User denied screen access or browser doesn\'t support it.');
+                    this.showFallbackOptions();
+                }
+            }
+
+            stopScreenShare() {
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                    this.localStream = null;
+                }
+                
+                const videoElement = document.getElementById('remoteVideo');
+                videoElement.style.display = 'none';
+                videoElement.srcObject = null;
+                
+                document.getElementById('screenShareControls').style.display = 'none';
+                document.getElementById('connectionOverlay').style.display = 'flex';
+                
+                this.isScreenSharing = false;
+                this.showWebRTCOptions();
+            }
+
+            showFallbackOptions() {
+                document.getElementById('fallbackOptions').style.display = 'block';
+            }
+
+            downloadRDPFile() {
+                const rdpContent = `screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1920
+desktopheight:i:1080
+session bpp:i:32
+winposstr:s:0,1,0,0,800,600
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+displayconnectionbar:i:1
+enableworkspacereconnect:i:0
+disable wallpaper:i:0
+allow font smoothing:i:0
+allow desktop composition:i:0
+disable full window drag:i:1
+disable menu anims:i:1
+disable themes:i:0
+disable cursor setting:i:0
+bitmapcachepersistenable:i:1
+full address:s:${this.hostIP}
+audiomode:i:0
+redirectprinters:i:1
+redirectcomports:i:0
+redirectsmartcards:i:1
+redirectclipboard:i:1
+redirectposdevices:i:0
+autoreconnection enabled:i:1
+authentication level:i:2
+prompt for credentials:i:0
+negotiate security layer:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+gatewayhostname:s:
+gatewayusagemethod:i:4
+gatewaycredentialssource:i:4
+gatewayprofileusagemethod:i:0
+promptcredentialonce:i:0
+gatewaybrokeringtype:i:0
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+kdcproxyname:s:
+username:s:${this.username}`;
+
+                const blob = new Blob([rdpContent], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${this.machineName.replace(/\s+/g, '_')}_connection.rdp`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                this.updateConnectionStatus('success', 'RDP File Downloaded', 'Open the downloaded .rdp file with Remote Desktop Connection.');
+            }
+
+            openVNCConnection() {
+                const vncUrl = `vnc://${this.hostIP}:5900`;
+                try {
+                    window.location.href = vncUrl;
+                    this.updateConnectionStatus('success', 'VNC Connection Launched', 'VNC client should open now. If not, install a VNC viewer.');
+                } catch (error) {
+                    this.updateConnectionStatus('error', 'VNC Launch Failed', 'Install a VNC client and connect manually to ' + this.hostIP + ':5900');
+                }
+            }
+
+            async connect() {
+                this.updateConnectionStatus('connecting', 'Connecting to Remote Desktop', 'Establishing secure connection...');
+                
+                try {
+                    // Instead of using iframe, create a direct RDP connection
+                    const connectionDetails = await this.establishDirectConnection();
+                    
+                    if (connectionDetails.success) {
+                        this.onConnectionSuccess();
+                        this.displayRemoteDesktop(connectionDetails);
+                    } else {
+                        throw new Error(connectionDetails.error || 'Connection failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Connection failed:', error);
+                    this.onConnectionError(error.message);
+                }
+            }
+
+            async establishDirectConnection() {
+                try {
+                    console.log('Establishing direct connection for machine ID:', this.machineId);
+                    
+                    // First, validate the machine exists
+                    const machineResponse = await fetch(`/api/machines/${this.machineId}`);
+                    console.log('Machine validation response status:', machineResponse.status);
+                    
+                    if (!machineResponse.ok) {
+                        throw new Error(`Machine not found (HTTP ${machineResponse.status})`);
+                    }
+                    
+                    const machineData = await machineResponse.json();
+                    console.log('Machine data received:', machineData);
+                    
+                    // Call backend API to establish RDP connection
+                    const response = await fetch(`/api/remote-access/enhanced-rdp`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            machineId: this.machineId,
+                            mode: 'shadow',
+                            autoLogin: true
+                        })
+                    });
+
+                    console.log('RDP connection response status:', response.status);
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('RDP connection failed:', errorText);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+                    }
+
+                    const result = await response.json();
+                    return result;
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    return { success: false, error: error.message };
+                }
+            }
+
+            displayRemoteDesktop(connectionDetails) {
+                const desktopFrame = document.getElementById('desktopFrame');
+                
+                // Create a custom RDP connection display
+                desktopFrame.innerHTML = `
+                    <div style="width: 100%; height: 100%; background: #2c3e50; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
+                        <div style="text-align: center; max-width: 600px; padding: 40px;">
+                            <div style="font-size: 64px; margin-bottom: 20px; color: #3498db;">
+                                🖥️
+                            </div>
+                            <h2 style="margin-bottom: 20px; color: #ecf0f1;">Remote Desktop Connection Ready</h2>
+                            <p style="margin-bottom: 30px; color: #bdc3c7; line-height: 1.6;">
+                                Your remote desktop connection has been established successfully. 
+                                The system is ready for remote access to <strong>${this.machineName}</strong> (${this.hostIP}).
+                            </p>
+                            
+                            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                                <h4 style="margin-bottom: 15px; color: #3498db;">Connection Options:</h4>
+                                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                                    <button onclick="window.open('mstsc', '_blank')" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                                        🎯 Launch RDP Client
+                                    </button>
+                                    <button onclick="window.open('/public/vnc.html?host=${this.hostIP}&name=${encodeURIComponent(this.machineName)}', '_blank')" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                                        🌐 Web VNC Viewer
+                                    </button>
+                                    <button onclick="this.downloadRDPFile()" style="background: #e67e22; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                                        📁 Download RDP File
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: left; background: rgba(52, 73, 94, 0.3); padding: 15px; border-radius: 5px; font-family: monospace; font-size: 14px;">
+                                <div style="margin-bottom: 8px;"><strong>Machine:</strong> ${this.machineName}</div>
+                                <div style="margin-bottom: 8px;"><strong>IP Address:</strong> ${this.hostIP}</div>
+                                <div style="margin-bottom: 8px;"><strong>Username:</strong> ${this.username}</div>
+                                <div style="margin-bottom: 8px;"><strong>Status:</strong> <span style="color: #27ae60;">● Connected</span></div>
+                                <div><strong>Mode:</strong> ${this.mode.toUpperCase()}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                desktopFrame.style.display = 'block';
+            }
+
+            downloadRDPFile() {
+                const rdpContent = `full address:s:${this.hostIP}:3389
+username:s:${this.username}
+screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1920
+desktopheight:i:1080
+session bpp:i:32
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+displayconnectionbar:i:1
+redirectprinters:i:1
+redirectclipboard:i:1
+autoreconnection enabled:i:1
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+enablecredsspsupport:i:1
+disable wallpaper:i:0
+disable full window drag:i:0
+disable menu anims:i:0
+disable themes:i:0
+bitmapcachepersistenable:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+smart sizing:i:1
+shadow:i:1`;
+
+                const blob = new Blob([rdpContent], { type: 'application/rdp' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${this.machineName.replace(/\s+/g, '_')}_remote.rdp`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
+            onConnectionSuccess() {
+                this.isConnected = true;
+                this.updateConnectionStatus('connected', 'Connected', 'Remote desktop connection established');
+                
+                // Hide overlay
+                document.getElementById('connectionOverlay').style.display = 'none';
+                
+                // Update info panel
+                document.getElementById('infoStatus').textContent = 'Connected';
+                document.getElementById('infoConnected').textContent = new Date().toLocaleTimeString();
+                
+                console.log('Successfully established remote desktop connection');
+            }
+
+            onConnectionError(errorMessage) {
+                this.isConnected = false;
+                this.updateConnectionStatus('offline', 'Connection Failed', errorMessage);
+                
+                const overlay = document.getElementById('connectionOverlay');
+                overlay.innerHTML = `
+                    <div class="connection-status">
+                        <h2>Connection Failed</h2>
+                        <div class="error-message">
+                            ${errorMessage}
+                        </div>
+                        <p>Please check if the remote machine is online and accessible.</p>
+                        <button class="btn btn-primary" onclick="viewer.reconnect()" style="margin-top: 20px;">
+                            <span>🔄</span> Try Again
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('infoStatus').textContent = 'Failed';
+            }
+
+            updateConnectionStatus(status, title, message) {
+                const indicator = document.getElementById('statusIndicator');
+                const titleEl = document.getElementById('connectionTitle');
+                const messageEl = document.getElementById('connectionMessage');
+                
+                // Update status indicator
+                indicator.className = `status-indicator ${status}`;
+                
+                // Update connection overlay
+                if (titleEl) titleEl.textContent = title;
+                if (messageEl) messageEl.textContent = message;
+                
+                console.log(`Status: ${status} - ${title}: ${message}`);
+            }
+
+            reconnect() {
+                // Reset display
+                const desktopFrame = document.getElementById('desktopFrame');
+                desktopFrame.style.display = 'none';
+                desktopFrame.innerHTML = '';
+                document.getElementById('connectionOverlay').style.display = 'flex';
+                
+                // Reset connection overlay content
+                document.getElementById('connectionOverlay').innerHTML = `
+                    <div class="connection-status">
+                        <h2 id="connectionTitle">Reconnecting to Remote Desktop</h2>
+                        <p id="connectionMessage">Re-establishing secure connection...</p>
+                        <div class="spinner"></div>
+                        <p id="connectionDetails"></p>
+                    </div>
+                `;
+                
+                this.connectionStartTime = Date.now();
+                this.connect();
+            }
+
+            changeQuality() {
+                const qualitySelect = document.getElementById('quality');
+                this.quality = qualitySelect.value;
+                document.getElementById('infoQuality').textContent = this.quality.toUpperCase();
+                
+                // Reconnect with new quality if already connected
+                if (this.isConnected) {
+                    this.reconnect();
+                }
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            toggleInfo() {
+                const infoPanel = document.getElementById('infoPanel');
+                infoPanel.classList.toggle('show');
+            }
+
+            closeViewer() {
+                if (confirm('Are you sure you want to close the live desktop viewer?')) {
+                    window.close();
+                }
+            }
+        }
+
+        // Global functions
+        function toggleFullscreen() {
+            viewer.toggleFullscreen();
+        }
+
+        function reconnect() {
+            viewer.reconnect();
+        }
+
+        // Global WebRTC Functions
+        function initializeWebRTC() {
+            viewer.initializeWebRTC();
+        }
+
+        function startScreenShare() {
+            viewer.startLocalScreenDemo();
+        }
+
+        function stopScreenShare() {
+            viewer.stopScreenShare();
+        }
+
+        function showFallbackOptions() {
+            viewer.showFallbackOptions();
+        }
+
+        function downloadRDPFile() {
+            viewer.downloadRDPFile();
+        }
+
+        function openVNCConnection() {
+            viewer.openVNCConnection();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function reconnect() {
+            viewer.initializeWebRTC();
+        }
+
+        function changeQuality() {
+            const quality = document.getElementById('quality').value;
+            viewer.quality = quality;
+            console.log('Quality changed to:', quality);
+        }
+
+        function toggleInfo() {
+            const infoPanel = document.getElementById('infoPanel');
+            infoPanel.classList.toggle('show');
+        }
+
+        function closeViewer() {
+            if (viewer.isScreenSharing) {
+                viewer.stopScreenShare();
+            }
+            if (confirm('Are you sure you want to close the viewer?')) {
+                window.close();
+            }
+        }
+
+        // Initialize viewer when page loads
+        let viewer;
+        window.addEventListener('DOMContentLoaded', () => {
+            viewer = new LiveDesktopViewer();
+        });
+
+        // Handle iframe load events (kept for backwards compatibility)
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'rdp-connected') {
+                viewer.onConnectionSuccess();
+            } else if (event.data.type === 'rdp-error') {
+                viewer.onConnectionError(event.data.message);
+            }
+        });
+    </script>
+</body>
+</html>
